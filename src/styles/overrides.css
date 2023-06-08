@@ -14,10 +14,7 @@ input[type=number]::-webkit-outer-spin-button {
 
 /* Application */
 
-.theme--light.v-application {
-  background: var(--v-background-base);
-}
-
+.theme--light.v-application,
 .theme--dark.v-application {
   background: var(--v-background-base);
 }
@@ -34,6 +31,28 @@ input[type=number]::-webkit-outer-spin-button {
   padding: 0px;
 }
 
+/* Sheet */
+
+.theme--light.v-sheet,
+.theme--dark.v-sheet {
+  background: var(--v-background-base);
+}
+
+/* Data Table */
+
+.v-data-table {
+  background: unset;
+}
+
+.theme--light.v-data-table,
+.theme--dark.v-data-table {
+  background: unset;
+}
+
+.theme--dark.v-data-table > .v-data-table__wrapper > table > tbody > tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
+  background: var(--v-background-lighten1);
+}
+
 /* Miscellaneous */
 
 .noselect {
@@ -43,4 +62,8 @@ input[type=number]::-webkit-outer-spin-button {
   -moz-user-select: none; /* Firefox */
   -ms-user-select: none; /* Internet Explorer/Edge */
   user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
+}
+
+.w-100 {
+  width: 100%;
 }

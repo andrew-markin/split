@@ -4,9 +4,11 @@ import io from 'socket.io-client'
 import Vue from 'vue'
 import Vuex from 'vuex'
 
-import router from '../router'
-import { adjustTimestamp, generateKey, keyToRef, pack, unpack } from '../utils'
+import router from '@/router'
+import { adjustTimestamp, generateId, generateKey, keyToRef, pack, unpack } from '@/utils'
+
 import Prefs from './prefs'
+import Split from './split'
 
 const SYNC_DELAY = 2000
 const SYNC_ENSURE_INTERVAL = 30000
@@ -18,21 +20,24 @@ Vue.use(Vuex)
 
 const unpackContext = (data, key) => {
   const json = unpack(data, key)
-  const { prefs } = (json && JSON.parse(json)) || {}
+  const { prefs, split } = (json && JSON.parse(json)) || {}
   return {
-    prefs: Prefs.unify(prefs || [])
+    prefs: Prefs.unify(prefs || []),
+    split: Split.extend(split || {})
   }
 }
 
-const packContext = ({ prefs }, key, remote = false) => {
+const packContext = ({ prefs, split }, key, remote = false) => {
   return pack(JSON.stringify({
-    prefs: Prefs.unify(prefs)
+    prefs: Prefs.unify(prefs),
+    split: Split.reduce(split, remote)
   }), key)
 }
 
 const mergeContexts = (local, remote) => {
   return {
-    prefs: Prefs.merge(local.prefs, remote.prefs)
+    prefs: Prefs.merge(local.prefs, remote.prefs),
+    split: Split.merge(local.split, remote.split)
   }
 }
 
@@ -102,21 +107,80 @@ const store = new Vuex.Store({
   state: {
     key: undefined,
     prefs: [],
+    split: Split.create(),
     saved: true,
     version: undefined,
-    prefsDialogShown: false
+    prefsDialogShown: false,
+    pick: {
+      scope: undefined,
+      id: undefined
+    }
   },
   getters: {
     synced (state) {
-      return state.version || (state.prefs.length === 0)
+      return state.version
     },
     getPref: (state) => (name) => {
       return Prefs.getValue(state.prefs, name)
+    },
+    categories (state) {
+      const result = Split.categories(state.split)
+      result.sort((left, right) => {
+        return left?.data?.name?.localeCompare(right?.data?.name) ||
+               left?.id.localeCompare(right?.id)
+      })
+      return result
+    },
+    pickedCategory (state) {
+      return (state.pick.scope === 'category') && state.pick.id
+    },
+    findCategory: (state) => (id) => {
+      return Split.findCategory(state.split, id)
+    },
+    participants (state) {
+      const result = Split.participants(state.split)
+      result.sort((left, right) => {
+        return left?.data?.name?.localeCompare(right?.data?.name) ||
+               left?.id.localeCompare(right?.id)
+      })
+      return result
+    },
+    pickedParticipant (state) {
+      return (state.pick.scope === 'participant') && state.pick.id
+    },
+    findParticipant: (state) => (id) => {
+      return Split.findParticipant(state.split, id)
+    },
+    participations: (state) => (query) => {
+      return Split.participations(state.split, query || {})
+    },
+    findParticipation: (state) => (id) => {
+      return Split.findParticipation(state.split, id)
+    },
+    expenses (state) {
+      const EMPTY_DATE = '0000-00-00'
+      const result = Split.expenses(state.split)
+      result.sort((left, right) => {
+        return (left?.data?.date || EMPTY_DATE).localeCompare(right?.data?.date || EMPTY_DATE) ||
+                left?.data?.description?.localeCompare(right?.data?.description) ||
+                left?.id.localeCompare(right?.id)
+      })
+      return result
+    },
+    pickedExpense (state) {
+      return (state.pick.scope === 'expense') && state.pick.id
+    },
+    findExpense: (state) => (id) => {
+      return Split.findExpense(state.split, id)
+    },
+    payments (state) {
+      return Split.payments(state.split)
     }
   },
   mutations: {
-    setContext (state, { prefs }) {
+    setContext (state, { prefs, split }) {
       state.prefs = prefs
+      state.split = split
       state.saved = false
     },
     setKey (state, value) {
@@ -134,6 +198,13 @@ const store = new Vuex.Store({
     },
     setPrefsDialogShown (state, value = true) {
       state.prefsDialogShown = value
+    },
+    pick (state, value) {
+      state.pick.scope = value?.scope
+      state.pick.id = value && (value.id || generateId())
+    },
+    applyEdits (state, edits) {
+      state.saved &= !Split.applyEdits(state.split, edits)
     }
   },
   actions: {
@@ -145,6 +216,21 @@ const store = new Vuex.Store({
     async resetSocket () {
       if (!socket.connected) return
       await submit('ref', undefined)
+    },
+    copyLink ({ state }) {
+      copyToClipboard(getSplitLink(state.key))
+    },
+    newSplit () {
+      window.open(getSplitLink(generateKey()))
+    },
+    async cloneSplit ({ state, dispatch }) {
+      const key = generateKey()
+      await dispatch('saveLocal', {
+        key,
+        name: 'data',
+        value: packContext(state, key)
+      })
+      window.open(getSplitLink(key))
     },
     saveLocal ({ state }, { name, value, key }) {
       const itemKey = `split:${keyToRef(key || state.key)}:${name}`
@@ -182,17 +268,6 @@ const store = new Vuex.Store({
       if (state.saved) return
       await dispatch('save')
       await dispatch('setVersion', undefined)
-    },
-    async setPref ({ commit, dispatch }, { name, value }) {
-      const release = await syncMutex.acquire()
-      try {
-        commit('setPref', { name, value })
-        await dispatch('saveIfNeeded')
-      } catch (err) {
-        console.warn('!Unable to set preference:', err.message)
-      } finally {
-        release()
-      }
     },
     async setVersion ({ state, commit, dispatch }, value) {
       if (!value) syncLater()
@@ -251,20 +326,39 @@ const store = new Vuex.Store({
         release()
       }
     },
-    copyLink ({ state }) {
-      copyToClipboard(getSplitLink(state.key))
+    async setPref ({ commit, dispatch }, { name, value }) {
+      const release = await syncMutex.acquire()
+      try {
+        commit('setPref', { name, value })
+        await dispatch('saveIfNeeded')
+      } catch (err) {
+        console.warn('!Unable to set preference:', err.message)
+      } finally {
+        release()
+      }
     },
-    newSplit () {
-      window.open(getSplitLink(generateKey()))
+    async applyEdits ({ commit, dispatch }, edits) {
+      const release = await syncMutex.acquire()
+      try {
+        commit('applyEdits', edits)
+        await dispatch('saveIfNeeded')
+      } catch (err) {
+        console.warn('Unable to apply edits:', err.message)
+      } finally {
+        release()
+      }
     },
-    async cloneSplit ({ state, dispatch }) {
-      const key = generateKey()
-      await dispatch('saveLocal', {
-        key,
-        name: 'data',
-        value: packContext(state, key)
-      })
-      window.open(getSplitLink(key))
+    pickCategory ({ commit }, id) {
+      commit('pick', { scope: 'category', id })
+    },
+    pickParticipant ({ commit }, id) {
+      commit('pick', { scope: 'participant', id })
+    },
+    pickExpense ({ commit }, id) {
+      commit('pick', { scope: 'expense', id })
+    },
+    pickNothing ({ commit }) {
+      commit('pick')
     }
   }
 })

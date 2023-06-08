@@ -1,4 +1,4 @@
-import { timestamp } from '../utils'
+import { timestamp } from '@/utils'
 
 const unify = (prefs) => {
   return prefs.map(({ name, value, changed }) => ({ name, value, changed }))

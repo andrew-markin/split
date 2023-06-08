@@ -1,14 +1,14 @@
 /* eslint-disable simple-import-sort/imports */
 import Vue from 'vue'
 
-import App from './App.vue'
-import i18n from './i18n'
-import router from './router'
-import store from './store'
-import vuetify from './vuetify'
+import App from '@/App.vue'
+import i18n from '@/i18n'
+import router from '@/router'
+import store from '@/store'
+import vuetify from '@/vuetify'
 
-import './styles/overrides.css'
-import './utils'
+import '@/styles/overrides.css'
+import '@/utils'
 
 Vue.config.productionTip = false
 
