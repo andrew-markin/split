@@ -77,6 +77,7 @@ export default {
       }, {
         text: this.$t('PARTICIPANT_PATRON'),
         value: 'patron',
+        class: 'text-no-wrap',
         cellClass: 'text-no-wrap'
       }, {
         text: this.$t('CATEGORIES'),
