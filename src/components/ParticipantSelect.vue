@@ -5,7 +5,8 @@
     :value-comparator="compare"
     :value="value"
     @input="input"
-    v-bind="$attrs">
+    v-bind="$attrs"
+    :no-data-text="$t('PARTICIPANTS_NO_DATA')">
     <template #item="{ item }">
       <span :class="{ 'muted-1': !item.value }">
         {{ item.text }}
