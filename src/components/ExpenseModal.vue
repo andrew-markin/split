@@ -181,12 +181,12 @@ export default {
       const expense = this.findExpense(this.pickedExpense)
       if (expense) {
         const { description, amount, category, payer, date } = expense.data || {}
-        this.original = { description, amount, category, payer, date }
         this.current.date = date || undefined
         this.current.description = description || ''
         this.current.category = category || undefined
         this.current.payer = payer || undefined
         this.current.amount = amount || ''
+        this.original = { ...this.current }
       } else {
         this.original = undefined
         this.current.date = undefined

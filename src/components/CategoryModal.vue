@@ -102,8 +102,8 @@ export default {
       const category = this.findCategory(this.pickedCategory)
       if (category) {
         const { name } = category.data || {}
-        this.original = { name }
         this.current.name = name || ''
+        this.original = { ...this.current }
       } else {
         this.original = undefined
         this.current.name = ''
