@@ -35,28 +35,29 @@
         </v-date-picker>
       </v-menu>
       <v-text-field
-        outlined autofocus
+        outlined autofocus class="mt-1"
         :label="$t('EXPENSE_DESCRIPTION')"
+        :hint="$t('EXPENSE_DESCRIPTION_HINT')"
         :rules="descriptionRules"
         v-model="current.description"
         :counter="128"
         @keydown.enter="save">
       </v-text-field>
       <category-select
-        outlined
+        outlined class="mt-1"
         :label="$t('CATEGORY')"
         :placeholder="$t('CATEGORY_COMMON')"
         persistent-placeholder
         v-model="current.category">
       </category-select>
       <participant-select
-        outlined
+        outlined class="mt-1"
         :label="$t('EXPENSE_PAYER')"
         :rules="payerRules"
         v-model="current.payer">
       </participant-select>
       <v-text-field
-        outlined
+        outlined class="mt-1"
         :label="$t('EXPENSE_AMOUNT')"
         :rules="amountRules"
         v-model="current.amount"

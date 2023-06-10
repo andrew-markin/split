@@ -11,32 +11,32 @@
       <v-text-field
         outlined autofocus
         :label="$t('PARTICIPANT_NAME')"
+        :hint="$t('PARTICIPANT_NAME_HINT')"
         :rules="nameRules"
         v-model="current.name"
         :counter="32"
         @keydown.enter="save">
       </v-text-field>
       <participant-select
-        outlined
+        outlined class="mt-1"
         :label="$t('PARTICIPANT_PATRON')"
         :placeholder="$t('PARTICIPANT_PATRON_NONE')"
+        persistent-placeholder
         :default="pickedParticipant"
-        v-model="current.patron"
-        persistent-placeholder>
+        v-model="current.patron">
       </participant-select>
       <v-text-field
-        outlined
+        outlined class="mt-1"
         :label="$t('PARTICIPANT_PAYMENT_COMMENT')"
+        :hint="$t('PARTICIPANT_PAYMENT_COMMENT_HINT')"
         :rules="commentRules"
         v-model="current.comment"
         :counter="64"
-        :placeholder="$t('PARTICIPANT_PAYMENT_COMMENT_PLACEHOLDER')"
-        persistent-placeholder
         @keydown.enter="save">
       </v-text-field>
     </v-form>
     <participations-select
-      class="mt-4"
+      class="mt-2"
       :participant="pickedParticipant"
       @input="updateParticipationsEdits">
     </participations-select>

@@ -11,6 +11,7 @@
         :label="$t('TITLE')"
         :rules="titleRules"
         :placeholder="$t('UNTITLED')"
+        :hint="$t('TITLE_HINT')"
         v-model="title"
         counter="64"
         @focus="$moveCursorToEnd"

@@ -11,6 +11,7 @@
       <v-text-field
         outlined autofocus
         :label="$t('CATEGORY_NAME')"
+        :hint="$t('CATEGORY_NAME_HINT')"
         :rules="nameRules"
         v-model="current.name"
         :counter="16"
@@ -18,6 +19,7 @@
       </v-text-field>
     </v-form>
     <participations-select
+      class="mt-2"
       :category="pickedCategory"
       @input="updateParticipationsEdits">
     </participations-select>
