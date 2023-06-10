@@ -17,13 +17,23 @@
         @keydown.enter="save">
       </v-text-field>
       <participant-select
-        outlined hide-details
+        outlined
         :label="$t('PARTICIPANT_PATRON')"
         :placeholder="$t('PARTICIPANT_PATRON_NONE')"
         :default="pickedParticipant"
         v-model="current.patron"
         persistent-placeholder>
       </participant-select>
+      <v-text-field
+        outlined
+        :label="$t('PARTICIPANT_PAYMENT_COMMENT')"
+        :rules="commentRules"
+        v-model="current.comment"
+        :counter="64"
+        :placeholder="$t('PARTICIPANT_PAYMENT_COMMENT_PLACEHOLDER')"
+        persistent-placeholder
+        @keydown.enter="save">
+      </v-text-field>
     </v-form>
     <participations-select
       class="mt-4"
@@ -60,7 +70,8 @@ export default {
     original: undefined,
     current: {
       name: '',
-      patron: undefined
+      patron: undefined,
+      comment: ''
     },
     formValid: undefined,
     participationsEdits: []
@@ -73,19 +84,29 @@ export default {
         (value) => (value.length <= 32) || this.$t('PARTICIPANT_NAME_LENGTH_LIMIT_MESSAGE')
       ]
     },
+    commentRules () {
+      return [
+        (value) => (value.length <= 64) || this.$t('PARTICIPANT_PAYMENT_COMMENT_LENGTH_LIMIT_MESSAGE')
+      ]
+    },
     currentNameNormalized () {
       return (this.current.name || '').trim()
+    },
+    currentCommentNormalized () {
+      return (this.current.comment || '').trim()
     },
     participantEdits () {
       if (!this.pickedParticipant || !this.formValid ||
           ((this.currentNameNormalized === this.original?.name) &&
-           (this.current.patron === this.original?.patron))) return []
+           (this.current.patron === this.original?.patron) &&
+           (this.currentCommentNormalized === this.original?.comment))) return []
       return [{
         table: 'participants',
         id: this.pickedParticipant,
         data: {
           name: this.currentNameNormalized,
-          patron: this.current.patron
+          patron: this.current.patron,
+          comment: this.currentCommentNormalized
         }
       }]
     },
@@ -111,19 +132,22 @@ export default {
         this.original = undefined
         this.current.name = ''
         this.current.patron = undefined
+        this.current.comment = ''
         this.visible = false
         return
       }
       const participant = this.findParticipant(this.pickedParticipant)
       if (participant) {
-        const { name, patron } = participant.data || {}
-        this.original = { name, patron }
+        const { name, patron, comment } = participant.data || {}
         this.current.name = name || ''
         this.current.patron = patron || undefined
+        this.current.comment = comment || ''
+        this.original = { ...this.current }
       } else {
         this.original = undefined
         this.current.name = ''
         this.current.patron = undefined
+        this.current.comment = ''
       }
       this.visible = true
     },

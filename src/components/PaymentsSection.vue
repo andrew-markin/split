@@ -43,6 +43,10 @@ export default {
       }, {
         text: this.$t('PAYMENT_RECEIVER'),
         value: 'receiver',
+        class: 'text-no-wrap',
+        cellClass: 'text-no-wrap'
+      }, {
+        value: 'comment',
         class: 'w-100',
         cellClass: 'text-no-wrap'
       }, {
@@ -53,15 +57,20 @@ export default {
       }]
     },
     items () {
-      const participantName = (id) => {
-        return id && this.findParticipant(id)?.data?.name
+      const participantData = (id) => {
+        return (id && this.findParticipant(id)?.data) || {}
       }
-      return this.payments.map((payment) => ({
-        digest: `${payment.sender}:${payment.receiver}`,
-        sender: participantName(payment.sender),
-        receiver: participantName(payment.receiver),
-        amount: payment.amount
-      })).sort((left, right) => {
+      return this.payments.map((payment) => {
+        const { name: senderName } = participantData(payment.sender)
+        const { name: receiverName, comment } = participantData(payment.receiver)
+        return {
+          digest: `${payment.sender}:${payment.receiver}`,
+          sender: senderName,
+          receiver: receiverName,
+          comment,
+          amount: payment.amount
+        }
+      }).sort((left, right) => {
         return left.sender?.localeCompare(right.sender) ||
                left.receiver?.localeCompare(right.receiver) ||
                left.digest?.localeCompare(right.digest)
