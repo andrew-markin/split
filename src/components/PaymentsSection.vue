@@ -79,8 +79,10 @@ export default {
   },
   methods: {
     copy () {
-      copyToClipboard(this.items.map(({ sender, receiver, amount }) => {
-        return `${sender} --> ${receiver}: ${amount}`
+      copyToClipboard(this.items.map(({ sender, receiver, comment, amount }) => {
+        let payment = `${sender} --> ${receiver}: ${amount}`
+        if (comment && (comment.length > 0)) payment += ` (${comment})`
+        return payment
       }).join('\n'))
     }
   }
