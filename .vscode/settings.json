@@ -24,5 +24,6 @@
   "workbench.colorCustomizations": {
     "statusBar.background" : "#333333"
   },
-  "vetur.validation.template": false
+  "vetur.validation.template": false,
+  "explorer.compactFolders": false
 }
