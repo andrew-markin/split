@@ -1,9 +1,10 @@
 {
   "recommendations": [
-    "Vue.volar",
     "dbaeumer.vscode-eslint",
-    "oxc.oxc-vscode",
     "esbenp.prettier-vscode",
-    "mikestead.dotenv"
+    "github.vscode-github-actions",
+    "mikestead.dotenv",
+    "oxc.oxc-vscode",
+    "Vue.volar"
   ]
 }
