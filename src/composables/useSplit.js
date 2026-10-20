@@ -5,6 +5,9 @@ import { sortByFields } from '@/utils'
 
 const NULL_ID = '0000000000000000000000'
 
+// Round to avoid floating point errors (e.g. 1.15 * 100 = 114.99999999999999)
+const toCents = (amount) => Math.round(Number(amount) * 100)
+
 let context
 
 function useContext() {
@@ -95,7 +98,7 @@ function useContext() {
       if (!categoryCalc?.scopeMap.size) continue
       const payerCalc = payersCalcMap.get(payer)
       if (!payerCalc) continue
-      const amountCents = Math.trunc(Number(amount) * 100)
+      const amountCents = toCents(amount)
       categoryCalc.expenseCents += amountCents
       payerCalc.balanceCents -= amountCents
     }
@@ -140,7 +143,7 @@ function useContext() {
     // Prepare existing transfer sequence
     const transferSequence = transfers.value.map(({ amount, ...transfer }) => ({
       ...transfer,
-      amountCents: Math.trunc(Number(amount) * 100)
+      amountCents: toCents(amount)
     }))
     transferSequence.sort((left, right) => left.nonce.localeCompare(right.nonce))
     // Initially treat all transfers as non-arbitrary (i.e. caused by settlement)
