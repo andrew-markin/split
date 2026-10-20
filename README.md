@@ -1,5 +1,8 @@
 # Split
 
+[![CI](https://github.com/andrew-markin/split/actions/workflows/ci.yml/badge.svg)](https://github.com/andrew-markin/split/actions/workflows/ci.yml)
+[![License: GPL v3](https://img.shields.io/github/license/andrew-markin/split)](LICENSE)
+
 Split is a simple open-source application for common expenses splitting. Splits can be easily shared by their URL addresses and therefore can be used for collaboration of a few people. With Split you can make sure that everything is counted and nothing is missed.
 
 The application is available at [split.mayfleet.com](https://split.mayfleet.com/).
