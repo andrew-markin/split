@@ -16,7 +16,7 @@ function useContext() {
       category: { scope: 'categories', fix: 'remove' }
     },
     participants: {
-      patron: { scope: 'participants', fix: 'unset' }
+      patron: { scope: 'participants', fix: 'unset', flat: true }
     },
     expenses: {
       payer: { scope: 'participants', fix: 'remove' },

@@ -46,7 +46,9 @@ const constraintsSchema = z.record(
     fieldNameSchema,
     z.strictObject({
       scope: collectionNameSchema,
-      fix: z.enum(['remove', 'unset'])
+      fix: z.enum(['remove', 'unset']),
+      // Referenced document must not reference further by the same field
+      flat: z.boolean().optional()
     })
   )
 )
@@ -232,11 +234,14 @@ function useContext() {
     let uncertainty = true
     while (uncertainty) {
       uncertainty = false
-      Object.entries(constraints).forEach(([collectionName, rules]) => {
+      // Collect broken references first and fix them afterwards, so that
+      // the result doesn't depend on the documents order (e.g. for cycles)
+      const fixes = []
+      Object.entries(constraints ?? {}).forEach(([collectionName, rules]) => {
         const testCollection = dataset.value[collectionName]
         if (!testCollection) return
         for (let testDocument of testCollection) {
-          Object.entries(rules).forEach(([fieldName, { scope, fix }]) => {
+          Object.entries(rules).forEach(([fieldName, { scope, fix, flat }]) => {
             const testField = testDocument[fieldName]
             if (!testField?.value) return
             const scopeDocumentId = testField?.value
@@ -245,20 +250,24 @@ function useContext() {
             if (!broken) {
               const scopeDocument = scopeCollectionIndex.get(scopeDocumentId)
               broken = !scopeDocument || !!scopeDocument.removed
+              if (!broken && flat) broken = !!scopeDocument[fieldName]?.value
             }
-            if (!broken) return
-            if (fix === 'remove') {
-              Object.keys(testDocument).forEach((key) => {
-                if (key !== 'id') delete testDocument[key]
-              })
-              Object.assign(testDocument, { removed: true })
-              uncertainty = true
-            } else if (fix === 'unset') {
-              Object.assign(testField, { value: undefined, nonce })
-            }
+            if (broken) fixes.push({ testDocument, testField, fix })
           })
         }
       })
+      for (const { testDocument, testField, fix } of fixes) {
+        if (fix === 'remove') {
+          if (testDocument.removed) continue
+          Object.keys(testDocument).forEach((key) => {
+            if (key !== 'id') delete testDocument[key]
+          })
+          Object.assign(testDocument, { removed: true })
+          uncertainty = true
+        } else if (fix === 'unset') {
+          Object.assign(testField, { value: undefined, nonce })
+        }
+      }
     }
   }
 
