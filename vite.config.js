@@ -2,12 +2,9 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { quasar, transformAssetUrls } from '@quasar/vite-plugin'
 import vue from '@vitejs/plugin-vue'
-import { dirname, resolve } from 'path'
 import { defineConfig } from 'vite'
 
 import quasarLangsRequiredPlugin from './plugins/quasar-langs-required.js'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
 export default defineConfig({

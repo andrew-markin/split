@@ -336,20 +336,20 @@ function useContext() {
 
   const modified = computed(() => !!changed.value)
 
-  function getLocalProperyStorageKey(name) {
+  function getLocalPropertyStorageKey(name) {
     return `split:${anchor}:property:${name}`
   }
 
   const locals = {
     set(name, value) {
       if (!anchor) return
-      const storageKey = getLocalProperyStorageKey(name)
+      const storageKey = getLocalPropertyStorageKey(name)
       if (value) storage.set(storageKey, value)
       else storage.remove(storageKey)
     },
     get(name) {
       if (!anchor) return
-      return storage.get(getLocalProperyStorageKey(name))
+      return storage.get(getLocalPropertyStorageKey(name))
     }
   }
 
