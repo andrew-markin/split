@@ -16,13 +16,13 @@
       />
     </q-form>
     <template #buttons>
-      <q-btn outline color="primary" label="Cancel" @click="$emit('close')" />
+      <q-btn outline color="primary" :label="$t('cancel')" @click="$emit('close')" />
       <q-btn
         unelevated
         type="submit"
         :form="formId"
         color="primary"
-        label="Save"
+        :label="$t('save')"
         :disable="!changed"
       />
     </template>
