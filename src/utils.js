@@ -85,6 +85,9 @@ function decodeBase62(text) {
 // of older versions have the timestamp in seconds in their first 6
 // characters, which start with a digit, and so are less than the current ones.
 export function getNonce(timestamp = Date.now()) {
+  // Timestamps in seconds would make nonces looking like the ones of older
+  // versions and ordered before all other ones, so changes would be lost
+  if (!(timestamp >= 1e12)) throw new Error(`Invalid nonce timestamp: ${timestamp}`)
   return encodeBase62(timestamp).padStart(7, '0') + getRandomBase62Key(21)
 }
 

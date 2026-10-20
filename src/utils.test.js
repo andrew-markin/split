@@ -52,6 +52,14 @@ describe('getNonce', () => {
     expect(getNonceTimestamp(nonces[1])).toBe(now)
   })
 
+  it('rejects timestamps not in milliseconds', () => {
+    const seconds = Math.floor(Date.now() / 1000)
+    expect(() => getNonce(seconds)).toThrow('Invalid nonce timestamp')
+    expect(() => getNonce(NaN)).toThrow('Invalid nonce timestamp')
+    expect(() => getNonce(null)).toThrow('Invalid nonce timestamp')
+    expect(getNonce()).toMatch(/^[A-Za-z][0-9A-Za-z]{27}$/)
+  })
+
   it('orders nonces of older versions with timestamps in seconds before current ones', () => {
     const seconds = Math.floor(Date.now() / 1000)
     const legacy = legacyNonce(seconds, 'z')
