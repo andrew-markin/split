@@ -120,6 +120,13 @@ export function useBlob() {
       })
       if (result.success) {
         Object.assign(state, { dataset, version: result.version })
+      } else if (result.data && result.version) {
+        // The blob was changed by someone else, and the rejection carries its
+        // current state, so take it at once instead of waiting for a notification
+        Object.assign(state, {
+          dataset: await unpackValue(result.data, secret),
+          version: result.version
+        })
       }
       return result
     } catch (err) {

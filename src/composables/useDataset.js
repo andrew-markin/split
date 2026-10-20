@@ -374,7 +374,8 @@ function useContext() {
         changed.value = undefined
         save()
       } else {
-        flushLater(3000)
+        // Retry soon after a version conflict, when the current blob is merged
+        flushLater(result ? 500 : 3000)
       }
     } catch (err) {
       console.error('Unable to flush:', err.message)
