@@ -31,7 +31,7 @@ export function useBlob() {
       anchor = await getCipher(secret, CIPHER_SALT, 'BLOBS_ANCHOR')
       // TODO: Maybe restore data and version from local storage
       Object.assign(state, {
-        data: undefined,
+        dataset: undefined,
         version: undefined
       })
     } catch (err) {
