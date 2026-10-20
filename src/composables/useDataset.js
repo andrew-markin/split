@@ -308,7 +308,7 @@ function useContext() {
     const release = await mutex.acquire()
     try {
       const result = await blob.update(dataset.value, version.value)
-      if (result.success) {
+      if (result?.success) {
         version.value = result.version
         changed.value = undefined
         save()
@@ -317,6 +317,7 @@ function useContext() {
       }
     } catch (err) {
       console.error('Unable to flush:', err.message)
+      flushLater(3000)
     } finally {
       release()
     }
