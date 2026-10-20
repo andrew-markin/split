@@ -99,6 +99,23 @@ export async function getCipher(secret, ...salts) {
   return Array.from(signatureBytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
+// Uint8Array.prototype.toBase64 and Uint8Array.fromBase64 are not supported
+// by older browsers, so fall back to btoa and atob
+function bytesToBase64(bytes) {
+  if (typeof bytes.toBase64 === 'function') return bytes.toBase64()
+  let binary = ''
+  const chunkSize = 0x8000
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+  }
+  return btoa(binary)
+}
+
+function base64ToBytes(base64) {
+  if (typeof Uint8Array.fromBase64 === 'function') return Uint8Array.fromBase64(base64)
+  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
+}
+
 export async function packValue(data, secret) {
   const stringified = JSON.stringify(data)
   const compressed = await new Promise((resolve, reject) => {
@@ -110,11 +127,11 @@ export async function packValue(data, secret) {
   const combined = new Uint8Array(iv.length + encrypted.byteLength)
   combined.set(iv, 0)
   combined.set(new Uint8Array(encrypted), iv.length)
-  return combined.toBase64()
+  return bytesToBase64(combined)
 }
 
 export async function unpackValue(data, secret) {
-  const combined = Uint8Array.fromBase64(data)
+  const combined = base64ToBytes(data)
   const iv = combined.slice(0, 12)
   const encrypted = combined.slice(12)
   const key = await getKeyFromSecret(secret)
