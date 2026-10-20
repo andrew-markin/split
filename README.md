@@ -65,6 +65,8 @@ npm run format  # Format the source code
 npm run build   # Build for production into dist/
 ```
 
+Integration tests of the synchronization run against the [Blobs](https://github.com/andrew-markin/blobs) project located next to this one or at `BLOBS_PATH`, and are skipped when it's missing.
+
 ## Deployment
 
 Every push to `main` is checked, tested, built and deployed to GitHub Pages by the [CI workflow](.github/workflows/ci.yml). The build takes the `VITE_*` values from the repository secrets with the same names.
