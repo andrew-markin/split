@@ -7,11 +7,19 @@ function get(key) {
 }
 
 function set(key, value) {
-  localStorage.setItem(key, JSON.stringify(value))
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch (err) {
+    console.warn('Unable to set storage value:', err.message)
+  }
 }
 
 function remove(key) {
-  localStorage.removeItem(key)
+  try {
+    localStorage.removeItem(key)
+  } catch (err) {
+    console.warn('Unable to remove storage value:', err.message)
+  }
 }
 
 export default { get, set, remove }
