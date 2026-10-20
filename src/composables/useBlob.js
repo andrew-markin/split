@@ -8,6 +8,8 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 const BACKEND_TOKEN = import.meta.env.VITE_BACKEND_TOKEN
 const CIPHER_SALT = import.meta.env.VITE_CIPHER_SALT
 
+const SUBMIT_TIMEOUT = 10000
+
 export function useBlob() {
   const mutex = new Mutex()
 
@@ -54,10 +56,14 @@ export function useBlob() {
   })
 
   socket.on('connect', async () => {
-    let localTimestamp = Date.now()
-    const { timestamp: remoteTimestamp } = await submit('now')
-    localTimestamp = Math.floor((localTimestamp + Date.now()) / 2)
-    timestampFix = remoteTimestamp - localTimestamp
+    try {
+      let localTimestamp = Date.now()
+      const { timestamp: remoteTimestamp } = await submit('now')
+      localTimestamp = Math.floor((localTimestamp + Date.now()) / 2)
+      timestampFix = remoteTimestamp - localTimestamp
+    } catch (err) {
+      console.warn('Unable to sync the timestamp:', err.message)
+    }
     await subscribe()
     await refresh()
   })
@@ -66,7 +72,8 @@ export function useBlob() {
 
   async function submit(event, ...args) {
     return new Promise((resolve, reject) => {
-      socket.emit(event, ...args, (res) => {
+      socket.timeout(SUBMIT_TIMEOUT).emit(event, ...args, (err, res) => {
+        if (err) return reject(err)
         const { error, ...rest } = res ?? {}
         if (error) reject(new Error(error))
         else resolve(rest)
