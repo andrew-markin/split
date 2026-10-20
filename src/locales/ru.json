@@ -45,6 +45,7 @@
   "participant.none": "Нет участников",
   "participant.patron.none": "Сам(а)",
   "participant.patron": "Кто платит",
+  "participant.patron.dependents.hint": "Участник платит за других, поэтому за него платить нельзя",
   "participant.plural": "Участники",
   "participant.preferences.hint": "Например: \"Через СБП по номеру +79200165344\"",
   "participant.preferences.none": "Отсутствуют",

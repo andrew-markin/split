@@ -45,6 +45,7 @@
   "participant.none": "No participants",
   "participant.patron.none": "Themselves",
   "participant.patron": "Who pays",
+  "participant.patron.dependents.hint": "Participant pays for others, so nobody pays for them",
   "participant.plural": "Participants",
   "participant.preferences.hint": "E.g. \"To my PayPal account james\\@gmail.com\"",
   "participant.preferences.none": "None",

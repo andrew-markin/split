@@ -25,15 +25,18 @@ import { useSplit } from '@/composables/useSplit'
 
 const model = defineModel({ type: String, default: undefined })
 
-const { exclude, placeholder } = defineProps({
+const { exclude, filter, placeholder } = defineProps({
   exclude: { type: String, default: undefined },
+  filter: { type: Function, default: undefined },
   placeholder: { type: String, default: undefined }
 })
 
 const { participants } = useSplit()
 
 const options = computed(() => {
-  const result = participants.value.map(({ name, id }) => ({ label: name, value: id }))
+  const result = participants.value
+    .filter((participant) => !filter || filter(participant))
+    .map(({ name, id }) => ({ label: name, value: id }))
   if (exclude) {
     const index = result.findIndex(({ value }) => value === exclude)
     if (index !== -1) result.splice(index, 1)

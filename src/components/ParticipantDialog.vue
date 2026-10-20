@@ -20,6 +20,9 @@
         :label="$t('participant.patron')"
         :placeholder="$t('participant.patron.none')"
         :exclude="form.id"
+        :filter="patronFilter"
+        :disable="hasDependents && !form.patron"
+        :hint="hasDependents ? $t('participant.patron.dependents.hint') : undefined"
       />
       <long-text-input
         v-model.trim="form.preferences"
@@ -88,6 +91,18 @@ const combinedChanges = computed(() => {
   return result
 })
 
+const { participants, upsert } = useSplit()
+
+// Patrons can't be chained: a patron pays for themselves and a participant
+// having dependents can't get a patron
+const hasDependents = computed(() =>
+  participants.value.some(({ patron }) => patron && patron === form.id)
+)
+
+function patronFilter({ id, patron }) {
+  return !patron || id === participant?.patron
+}
+
 const { stringSchema } = useSchemas()
 
 const nameSchema = stringSchema(t('participant.name.required.error'))
@@ -95,8 +110,6 @@ const nameRules = [useValidator(nameSchema)]
 
 const preferencesSchema = stringSchema()
 const preferencesRules = [useValidator(preferencesSchema)]
-
-const { upsert } = useSplit()
 
 async function submit() {
   if (!changesAvailable.value) return
