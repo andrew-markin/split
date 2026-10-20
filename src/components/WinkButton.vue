@@ -5,11 +5,12 @@
 </template>
 
 <script setup>
+import { mdiCheck } from '@quasar/extras/mdi-v7'
 import { ref } from 'vue'
 
 defineProps({
   icon: { type: String, default: undefined },
-  winkIcon: { type: String, default: 'mdi-check' }
+  winkIcon: { type: String, default: mdiCheck }
 })
 
 const winkShown = ref(false)

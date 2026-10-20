@@ -12,7 +12,7 @@
         </transition>
       </div>
       <q-space />
-      <q-btn unelevated icon="mdi-menu" class="q-pa-sm btn-menu">
+      <q-btn unelevated :icon="mdiMenu" class="q-pa-sm btn-menu">
         <split-menu />
       </q-btn>
     </block-container>
@@ -29,6 +29,7 @@
 </template>
 
 <script setup>
+import { mdiMenu } from '@quasar/extras/mdi-v7'
 import { useMeta } from 'quasar'
 import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'

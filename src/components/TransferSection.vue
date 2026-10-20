@@ -7,13 +7,13 @@
     @edit="edit"
   >
     <template #buttons="{ selection }">
-      <q-btn flat round icon="mdi-plus" @click="edit()" />
+      <q-btn flat round :icon="mdiPlus" @click="edit()" />
       <q-btn
         v-if="selection.length > 0"
         flat
         round
         color="negative"
-        icon="mdi-trash-can-outline"
+        :icon="mdiTrashCanOutline"
         @click="remove(selection)"
       />
     </template>
@@ -33,6 +33,7 @@
 </template>
 
 <script setup>
+import { mdiPlus, mdiTrashCanOutline } from '@quasar/extras/mdi-v7'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 

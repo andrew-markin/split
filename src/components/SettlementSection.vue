@@ -12,7 +12,7 @@
         v-if="settlements.length > 0"
         flat
         round
-        icon="mdi-content-copy"
+        :icon="mdiContentCopy"
         @click="copy(selection)"
       />
     </template>
@@ -37,6 +37,7 @@
 </template>
 
 <script setup>
+import { mdiContentCopy } from '@quasar/extras/mdi-v7'
 import copyToClipboard from 'copy-to-clipboard'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'

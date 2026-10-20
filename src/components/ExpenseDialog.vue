@@ -25,7 +25,7 @@
         no-error-icon
       >
         <template #append>
-          <wink-button round flat icon="mdi-pin-outline" @click.stop.prevent="pinPayer()" />
+          <wink-button round flat :icon="mdiPinOutline" @click.stop.prevent="pinPayer()" />
         </template>
       </participant-select>
       <q-input
@@ -53,6 +53,7 @@
 </template>
 
 <script setup>
+import { mdiPinOutline } from '@quasar/extras/mdi-v7'
 import { useI18n } from 'vue-i18n'
 
 import { useForm } from '@/composables/useForm'

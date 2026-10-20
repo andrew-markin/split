@@ -3,7 +3,7 @@
     <q-card-section class="row no-wrap items-center q-pb-none">
       <div class="text-h5 muted-1">{{ title }}</div>
       <q-space />
-      <q-btn flat round icon="mdi-close" @click="cancel()" />
+      <q-btn flat round :icon="mdiClose" @click="cancel()" />
     </q-card-section>
     <q-card-section>
       <slot></slot>
@@ -18,6 +18,8 @@
 </template>
 
 <script setup>
+import { mdiClose } from '@quasar/extras/mdi-v7'
+
 import { useDialogs } from '@/composables/useDialogs'
 import { useScreen } from '@/composables/useScreen'
 

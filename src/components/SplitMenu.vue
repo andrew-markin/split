@@ -3,25 +3,25 @@
     <q-list role="menu" style="min-width: 25ch">
       <q-item v-close-popup clickable @click="copyLink()">
         <q-item-section side>
-          <q-icon name="mdi-link-variant" />
+          <q-icon :name="mdiLinkVariant" />
         </q-item-section>
         <q-item-section no-wrap>{{ $t('menu.copyLink') }}</q-item-section>
       </q-item>
       <q-item v-close-popup clickable @click="newSplit()">
         <q-item-section side>
-          <q-icon name="mdi-open-in-new" />
+          <q-icon :name="mdiOpenInNew" />
         </q-item-section>
         <q-item-section no-wrap>{{ $t('menu.newSplit') }}</q-item-section>
       </q-item>
       <q-item v-close-popup clickable @click="cloneSplit()">
         <q-item-section side>
-          <q-icon name="mdi-content-duplicate" />
+          <q-icon :name="mdiContentDuplicate" />
         </q-item-section>
         <q-item-section no-wrap>{{ $t('menu.cloneSplit') }}</q-item-section>
       </q-item>
       <q-item v-close-popup clickable @click="toggleTheme()">
         <q-item-section side>
-          <q-icon name="mdi-theme-light-dark" />
+          <q-icon :name="mdiThemeLightDark" />
         </q-item-section>
         <q-item-section no-wrap>{{ $t('menu.toggleColorTheme') }}</q-item-section>
       </q-item>
@@ -37,20 +37,20 @@
         @click="$i18n.locale = locale"
       >
         <q-item-section side>
-          <q-icon name="mdi-translate" />
+          <q-icon :name="mdiTranslate" />
         </q-item-section>
         <q-item-section no-wrap>{{ $t('#locale.title', {}, { locale }) }}</q-item-section>
       </q-item>
       <q-separator />
       <q-item v-close-popup clickable :href="github" target="_blank">
         <q-item-section side>
-          <q-icon name="mdi-github" />
+          <q-icon :name="mdiGithub" />
         </q-item-section>
         <q-item-section no-wrap>{{ $t('menu.githubRepository') }}</q-item-section>
       </q-item>
       <q-item v-close-popup clickable :href="linkedin" target="_blank">
         <q-item-section side>
-          <q-icon name="mdi-linkedin" />
+          <q-icon :name="mdiLinkedin" />
         </q-item-section>
         <q-item-section no-wrap>{{ $t('menu.linkedinProfile') }}</q-item-section>
       </q-item>
@@ -59,6 +59,15 @@
 </template>
 
 <script setup>
+import {
+  mdiContentDuplicate,
+  mdiGithub,
+  mdiLinkedin,
+  mdiLinkVariant,
+  mdiOpenInNew,
+  mdiThemeLightDark,
+  mdiTranslate
+} from '@quasar/extras/mdi-v7'
 import copyToClipboard from 'copy-to-clipboard'
 import { useRoute } from 'vue-router'
 
