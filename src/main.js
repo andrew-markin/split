@@ -82,7 +82,9 @@ watch(
     if (locale !== navigatorLocale) storage.set(LOCALE_STORAGE_KEY, locale)
     else storage.remove(LOCALE_STORAGE_KEY)
     Quasar.lang.set(quasarLangForLocale(locale))
-  }
+    document.documentElement.lang = messages[locale] ? locale : 'en'
+  },
+  { immediate: true }
 )
 
 app.mount('#app')
