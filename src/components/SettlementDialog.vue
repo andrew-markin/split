@@ -1,6 +1,6 @@
 <template>
   <dialog-frame :title="$t('settlement')">
-    <q-form id="form" autofocus greedy class="column no-wrap q-gutter-md" @submit="submit()">
+    <q-form :id="formId" autofocus greedy class="column no-wrap q-gutter-md" @submit="submit()">
       <participant-select
         :model-value="form.sender"
         outlined
@@ -52,7 +52,7 @@
       <q-btn
         unelevated
         type="submit"
-        form="form"
+        :form="formId"
         color="primary"
         :label="$t('confirm')"
         :disable="!completed"
@@ -62,7 +62,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, useId } from 'vue'
 
 import { useForm } from '@/composables/useForm'
 import { useSchemas } from '@/composables/useSchemas.js'
@@ -80,6 +80,9 @@ const { settlement } = defineProps({
 })
 
 const emit = defineEmits(['close'])
+
+// Unique per dialog: a closing dialog may still be in the DOM
+const formId = useId()
 
 const { form, changes, changed } = useForm(
   {},

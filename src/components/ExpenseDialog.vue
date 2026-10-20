@@ -1,6 +1,6 @@
 <template>
   <dialog-frame :title="expense?.id ? $t('expense') : $t('expense.new')">
-    <q-form id="form" autofocus greedy class="column no-wrap q-gutter-md" @submit="submit()">
+    <q-form :id="formId" autofocus greedy class="column no-wrap q-gutter-md" @submit="submit()">
       <date-input v-model="form.date" outlined clearable stack-label :label="$t('date')" />
       <long-text-input
         v-model.trim="form.description"
@@ -43,7 +43,7 @@
       <q-btn
         unelevated
         type="submit"
-        form="form"
+        :form="formId"
         color="primary"
         :label="$t('save')"
         :disable="!changed"
@@ -54,6 +54,7 @@
 
 <script setup>
 import { mdiPinOutline } from '@quasar/extras/mdi-v7'
+import { useId } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useForm } from '@/composables/useForm'
@@ -73,6 +74,9 @@ const { expense } = defineProps({
 })
 
 const emit = defineEmits(['close'])
+
+// Unique per dialog: a closing dialog may still be in the DOM
+const formId = useId()
 
 const { t } = useI18n()
 const { amountSchema, stringSchema } = useSchemas()

@@ -1,6 +1,6 @@
 <template>
   <dialog-frame :title="$t('split')">
-    <q-form id="form" autofocus greedy class="column no-wrap q-gutter-md" @submit="submit()">
+    <q-form :id="formId" autofocus greedy class="column no-wrap q-gutter-md" @submit="submit()">
       <long-text-input
         v-model.trim="form.title"
         outlined
@@ -20,7 +20,7 @@
       <q-btn
         unelevated
         type="submit"
-        form="form"
+        :form="formId"
         color="primary"
         label="Save"
         :disable="!changed"
@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-import { computed, reactive } from 'vue'
+import { computed, reactive, useId } from 'vue'
 
 import { useSchemas } from '@/composables/useSchemas.js'
 import { useSplit } from '@/composables/useSplit'
@@ -40,6 +40,9 @@ import DialogFrame from './DialogFrame.vue'
 import LongTextInput from './LongTextInput.vue'
 
 const emit = defineEmits(['close'])
+
+// Unique per dialog: a closing dialog may still be in the DOM
+const formId = useId()
 
 const { title } = useSplit()
 

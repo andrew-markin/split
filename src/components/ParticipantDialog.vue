@@ -1,6 +1,6 @@
 <template>
   <dialog-frame :title="participant?.id ? $t('participant') : $t('participant.new')">
-    <q-form id="form" autofocus greedy class="column no-wrap q-gutter-md" @submit="submit()">
+    <q-form :id="formId" autofocus greedy class="column no-wrap q-gutter-md" @submit="submit()">
       <q-input
         v-model.trim="form.name"
         outlined
@@ -48,7 +48,7 @@
       <q-btn
         unelevated
         type="submit"
-        form="form"
+        :form="formId"
         color="primary"
         :label="$t('save')"
         :disable="!changesAvailable"
@@ -58,7 +58,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, useId } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useForm } from '@/composables/useForm'
@@ -76,6 +76,9 @@ const { participant } = defineProps({
 })
 
 const emit = defineEmits(['close'])
+
+// Unique per dialog: a closing dialog may still be in the DOM
+const formId = useId()
 
 const { t } = useI18n()
 
