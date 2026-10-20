@@ -53,6 +53,17 @@ const constraintsSchema = z.record(
   )
 )
 
+// Local copies of the most recently opened splits kept in the storage
+const STATES_KEPT = 50
+// Local copies kept when the storage is full
+const STATES_KEPT_ON_OVERFLOW = 5
+
+const ACCESSED_STORAGE_KEY = 'split:accessed'
+const STATE_STORAGE_KEY_PATTERN = /^split:([0-9a-f]{64}):state$/
+
+const getStateStorageKey = (anchor) => `split:${anchor}:state`
+const getPropertyStorageKey = (anchor, name) => `split:${anchor}:property:${name}`
+
 let context
 
 function useContext() {
@@ -92,7 +103,9 @@ function useContext() {
       version.value = undefined
       dataset.value = {}
       datasetIndex = {}
-      const state = storage.get(`split:${anchor}:state`) ?? {}
+      touch()
+      prune()
+      const state = storage.get(getStateStorageKey(anchor)) ?? {}
       merge(state.dataset)
       version.value = state.version
       changed.value = state.changed
@@ -107,16 +120,55 @@ function useContext() {
 
   function save() {
     if (!anchor) return
-    storage.set(`split:${anchor}:state`, {
+    const key = getStateStorageKey(anchor)
+    const state = {
       dataset: dataset.value,
       version: version.value,
       changed: changed.value
-    })
+    }
+    if (storage.set(key, state)) return
+    // The storage is probably full, so drop older local copies and retry
+    prune(STATES_KEPT_ON_OVERFLOW)
+    if (!storage.set(key, state)) console.error('Unable to save the split locally')
+  }
+
+  function touch() {
+    const accessed = storage.get(ACCESSED_STORAGE_KEY) ?? {}
+    accessed[anchor] = Date.now()
+    storage.set(ACCESSED_STORAGE_KEY, accessed)
+  }
+
+  // Remove local copies of splits opened long ago, except the current one and
+  // the ones having changes not synchronized yet
+  function prune(keep = STATES_KEPT) {
+    const accessed = storage.get(ACCESSED_STORAGE_KEY) ?? {}
+    const keys = storage.keys()
+    const anchors = keys
+      .map((key) => key.match(STATE_STORAGE_KEY_PATTERN)?.[1])
+      .filter((value) => value && value !== anchor)
+      .sort((left, right) => (accessed[right] ?? 0) - (accessed[left] ?? 0))
+    const removed = new Set()
+    for (const value of anchors.slice(keep)) {
+      if (storage.get(getStateStorageKey(value))?.changed) continue
+      removed.add(value)
+    }
+    for (const key of keys) {
+      const value = key.match(/^split:([0-9a-f]{64}):/)?.[1]
+      if (removed.has(value)) storage.remove(key)
+    }
+    // Forget removed copies as well as the ones gone some other way
+    const known = new Set([anchor, ...anchors])
+    const forgotten = Object.keys(accessed).filter(
+      (value) => removed.has(value) || !known.has(value)
+    )
+    if (forgotten.length === 0) return
+    forgotten.forEach((value) => delete accessed[value])
+    storage.set(ACCESSED_STORAGE_KEY, accessed)
   }
 
   async function clone(secret) {
     const anchor = await getStorageAnchor(secret)
-    storage.set(`split:${anchor}:state`, {
+    storage.set(getStateStorageKey(anchor), {
       dataset: dataset.value,
       changed: Date.now()
     })
@@ -336,20 +388,16 @@ function useContext() {
 
   const modified = computed(() => !!changed.value)
 
-  function getLocalPropertyStorageKey(name) {
-    return `split:${anchor}:property:${name}`
-  }
-
   const locals = {
     set(name, value) {
       if (!anchor) return
-      const storageKey = getLocalPropertyStorageKey(name)
+      const storageKey = getPropertyStorageKey(anchor, name)
       if (value) storage.set(storageKey, value)
       else storage.remove(storageKey)
     },
     get(name) {
       if (!anchor) return
-      return storage.get(getLocalPropertyStorageKey(name))
+      return storage.get(getPropertyStorageKey(anchor, name))
     }
   }
 
