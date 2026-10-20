@@ -60,6 +60,7 @@ export function useBlob() {
     try {
       let localTimestamp = Date.now()
       const { timestamp: remoteTimestamp } = await submit('now')
+      if (!Number.isFinite(remoteTimestamp)) throw new Error('Invalid server timestamp')
       localTimestamp = Math.floor((localTimestamp + Date.now()) / 2)
       timestampFix = remoteTimestamp - localTimestamp
     } catch (err) {
