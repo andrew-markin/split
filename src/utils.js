@@ -74,15 +74,23 @@ function encodeBase62(value) {
   return result.reverse().join('')
 }
 
-function timestampToBase62(timestamp) {
-  return encodeBase62(timestamp).padStart(6, '0')
+function decodeBase62(text) {
+  let result = 0
+  for (const char of text) result = result * 62 + base62Map.get(char)
+  return result
 }
 
-export function getNonce(timestamp = undefined) {
-  return [
-    timestampToBase62(timestamp ?? Math.floor(Date.now() / 1000)),
-    getRandomBase62Key(22)
-  ].join('')
+// Nonces are 28 characters long and ordered by their creation time first:
+// 7 characters of the timestamp in milliseconds and 21 random ones. Nonces
+// of older versions have the timestamp in seconds in their first 6
+// characters, which start with a digit, and so are less than the current ones.
+export function getNonce(timestamp = Date.now()) {
+  return encodeBase62(timestamp).padStart(7, '0') + getRandomBase62Key(21)
+}
+
+export function getNonceTimestamp(nonce) {
+  if (/^[0-9]/.test(nonce)) return decodeBase62(nonce.slice(0, 6)) * 1000
+  return decodeBase62(nonce.slice(0, 7))
 }
 
 export async function getCipher(secret, ...salts) {

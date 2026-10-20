@@ -47,8 +47,9 @@ export function useBlob() {
 
   let timestampFix = 0
 
+  // Current time in milliseconds adjusted to the server clock
   function timestamp() {
-    return Math.floor((Date.now() + timestampFix) / 1000)
+    return Date.now() + timestampFix
   }
 
   socket.on('connect_error', (err) => {

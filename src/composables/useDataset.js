@@ -3,7 +3,7 @@ import { computed, ref, shallowRef, toRaw, triggerRef, watch } from 'vue'
 import * as z from 'zod'
 
 import storage from '@/storage'
-import { getCipher, getNonce, getRandomId, sortByFields } from '@/utils'
+import { getCipher, getNonce, getNonceTimestamp, getRandomId, sortByFields } from '@/utils'
 
 import { useBlob } from './useBlob'
 
@@ -81,6 +81,21 @@ function useContext() {
   let flushTimeout = undefined
 
   const blob = useBlob()
+
+  // The latest timestamp of the nonces generated or seen. New nonces are always
+  // later, so that a change made after seeing a value always overrides it,
+  // even when both are made within the same millisecond or the clocks differ.
+  let clock = 0
+
+  function observe(nonce) {
+    const timestamp = getNonceTimestamp(nonce)
+    if (timestamp > clock) clock = timestamp
+  }
+
+  function nextNonce() {
+    clock = Math.max(blob.timestamp(), clock + 1)
+    return getNonce(clock)
+  }
 
   function constrain(value) {
     try {
@@ -241,6 +256,13 @@ function useContext() {
     try {
       if (!theirDataset) return
       datasetSchema.parse(theirDataset)
+      for (const collection of Object.values(theirDataset)) {
+        for (const document of collection) {
+          for (const [key, field] of Object.entries(document)) {
+            if (key !== 'id' && key !== 'removed') observe(field.nonce)
+          }
+        }
+      }
       Object.entries(theirDataset).forEach(([collectionName, theirCollection]) => {
         if (!collectionNameIsValid(collectionName)) return
         let ourCollection = dataset.value[collectionName]
@@ -282,7 +304,7 @@ function useContext() {
   }
 
   function fixup() {
-    const nonce = getNonce(blob.timestamp())
+    const nonce = nextNonce()
     let uncertainty = true
     while (uncertainty) {
       uncertainty = false
@@ -329,7 +351,7 @@ function useContext() {
       const datasetUpsert = typeof value === 'function' ? value() : value
       datasetUpsertSchema.parse(datasetUpsert)
       const upsertDataset = {}
-      const nonce = getNonce(blob.timestamp())
+      const nonce = nextNonce()
       Object.entries(datasetUpsert).forEach(([collectionName, collectionUpsert]) => {
         upsertDataset[collectionName] = collectionUpsert.map(({ id, removed, ...fields }) => {
           const result = { id: id ?? getRandomId() }

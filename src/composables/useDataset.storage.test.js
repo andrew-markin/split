@@ -10,7 +10,7 @@ vi.mock('./useBlob', () => ({
     connect: async () => {},
     state: reactive({ dataset: undefined, version: undefined }),
     update: async () => ({ success: true, version: 1 }),
-    timestamp: () => Math.floor(Date.now() / 1000)
+    timestamp: () => Date.now()
   })
 }))
 
