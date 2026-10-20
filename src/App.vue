@@ -1,5 +1,5 @@
 <template>
-  <div class="fullscreen loading" :class="{ ready }">
+  <div class="fullscreen app loading" :class="{ ready }">
     <router-view />
     <dialog-stack />
   </div>
@@ -20,7 +20,13 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+.app {
+  background-color: $base-color;
+  .body--dark & {
+    background-color: $base-dark-color;
+  }
+}
 .loading {
   opacity: 0;
   transition: opacity 0.4s cubic-bezier(0, 0, 0.2, 1);

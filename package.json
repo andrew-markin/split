@@ -18,7 +18,8 @@
     "check:eslint": "eslint .",
     "check:format": "prettier --check src/",
     "format": "prettier --write --experimental-cli src/",
-    "audit": "npm audit --omit=dev"
+    "audit": "npm audit --omit=dev",
+    "pattern": "node scripts/generate-pattern.js"
   },
   "dependencies": {
     "@quasar/extras": "^2.1.0",

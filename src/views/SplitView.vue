@@ -17,8 +17,9 @@
       </q-btn>
     </block-container>
   </div>
-  <scroll-area class="content bg-base" :vertical-offset="[headerSize, 0]">
-    <div class="column q-mb-md" :style="{ marginTop: `${headerSize}px` }">
+  <scroll-area class="content" :vertical-offset="[headerSize, 0]">
+    <background-pattern />
+    <div class="column relative-position q-mb-md" :style="{ marginTop: `${headerSize}px` }">
       <participant-section />
       <category-section />
       <expense-section />
@@ -34,6 +35,7 @@ import { useMeta } from 'quasar'
 import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import BackgroundPattern from '@/components/BackgroundPattern.vue'
 import BlockContainer from '@/components/BlockContainer.vue'
 import CategorySection from '@/components/CategorySection.vue'
 import ExpenseSection from '@/components/ExpenseSection.vue'
@@ -113,9 +115,5 @@ async function edit() {
   top: 0px;
   right: 0px;
   bottom: 0px;
-  background-color: $base-color;
-  .body--dark & {
-    background-color: $base-dark-color;
-  }
 }
 </style>
