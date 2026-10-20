@@ -13,9 +13,12 @@
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
+    "check": "run-s check:*",
+    "check:oxlint": "oxlint .",
+    "check:eslint": "eslint .",
+    "check:format": "prettier --check src/",
     "format": "prettier --write --experimental-cli src/",
-    "audit": "npm audit --omit=dev",
-    "deploy": "sh deploy.sh"
+    "audit": "npm audit --omit=dev"
   },
   "dependencies": {
     "@quasar/extras": "^2.1.0",
