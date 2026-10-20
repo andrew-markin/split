@@ -134,7 +134,7 @@ function useContext() {
       })
       // Distribute leftover cents one by one to the highest-priority participants
       for (let i = 0; i < leftoverCents; i++) {
-        scope[i].payerCalc.balance += 1
+        scope[i].payerCalc.balanceCents += 1
       }
     }
     // Prepare existing transfer sequence
