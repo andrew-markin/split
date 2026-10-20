@@ -15,6 +15,7 @@ function useContext() {
 
   constrain({
     participations: {
+      participant: { scope: 'participants', fix: 'remove' },
       category: { scope: 'categories', fix: 'remove' }
     },
     participants: {
@@ -23,6 +24,10 @@ function useContext() {
     expenses: {
       payer: { scope: 'participants', fix: 'remove' },
       category: { scope: 'categories', fix: 'unset' }
+    },
+    transfers: {
+      sender: { scope: 'participants', fix: 'remove' },
+      receiver: { scope: 'participants', fix: 'remove' }
     }
   })
 
