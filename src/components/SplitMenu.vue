@@ -25,21 +25,35 @@
         </q-item-section>
         <q-item-section no-wrap>{{ $t('menu.toggleColorTheme') }}</q-item-section>
       </q-item>
-      <q-separator />
-      <q-item-label header>{{ $t('menu.applicationLanguage') }}</q-item-label>
-      <q-item
-        v-for="locale in $i18n.availableLocales"
-        :key="locale"
-        v-close-popup
-        clickable
-        :active="$i18n.locale === locale"
-        active-class="bg-primary text-white text-bold"
-        @click="$i18n.locale = locale"
-      >
+      <q-item clickable>
         <q-item-section side>
           <q-icon :name="mdiTranslate" />
         </q-item-section>
-        <q-item-section no-wrap>{{ $t('#locale.title', {}, { locale }) }}</q-item-section>
+        <q-item-section no-wrap>
+          <q-item-label>{{ $t('menu.applicationLanguage') }}</q-item-label>
+          <q-item-label caption>{{ $t('#locale.title') }}</q-item-label>
+        </q-item-section>
+        <q-item-section side>
+          <q-icon :name="mobile ? mdiChevronDown : mdiChevronRight" />
+        </q-item-section>
+        <q-menu
+          :anchor="mobile ? 'bottom end' : 'top end'"
+          :self="mobile ? 'top end' : 'top start'"
+        >
+          <q-list role="menu" style="min-width: 20ch">
+            <q-item
+              v-for="locale in $i18n.availableLocales"
+              :key="locale"
+              v-close-popup="2"
+              clickable
+              :active="$i18n.locale === locale"
+              active-class="bg-primary text-white text-bold"
+              @click="$i18n.locale = locale"
+            >
+              <q-item-section no-wrap>{{ $t('#locale.title', {}, { locale }) }}</q-item-section>
+            </q-item>
+          </q-list>
+        </q-menu>
       </q-item>
       <q-separator />
       <q-item v-close-popup clickable :href="github" target="_blank">
@@ -60,6 +74,8 @@
 
 <script setup>
 import {
+  mdiChevronDown,
+  mdiChevronRight,
   mdiContentDuplicate,
   mdiGithub,
   mdiLinkedin,
@@ -71,6 +87,7 @@ import {
 import copyToClipboard from 'copy-to-clipboard'
 import { useRoute } from 'vue-router'
 
+import { useScreen } from '@/composables/useScreen'
 import { useSplit } from '@/composables/useSplit'
 import { useThemes } from '@/composables/useThemes'
 import { github, linkedin } from '@/links'
@@ -79,6 +96,7 @@ import { getRandomSecret } from '@/utils'
 
 const route = useRoute()
 
+const { mobile } = useScreen()
 const { clone } = useSplit()
 const themes = useThemes()
 

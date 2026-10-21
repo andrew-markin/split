@@ -13,7 +13,7 @@ The application is available at [split.mayfleet.com](https://split.mayfleet.com/
 - Patrons: a participant can pay for others, e.g. for family members, and their shares are added up.
 - Expense categories with custom participation rates, so everyone pays only for what they share.
 - Settlements calculated to the cent with as few transfers as possible, and completed transfers tracked.
-- English and Russian interface, light and dark color themes.
+- English, Russian, Spanish, Brazilian Portuguese, German and French interface, light and dark color themes.
 
 ## How It Works
 
