@@ -96,7 +96,7 @@ export function getNonceTimestamp(nonce) {
   return decodeBase62(nonce.slice(0, 7))
 }
 
-export async function getCipher(secret, ...salts) {
+async function sign(secret, salts) {
   const key = await crypto.subtle.importKey(
     'raw',
     encoder.encode(secret),
@@ -105,9 +105,23 @@ export async function getCipher(secret, ...salts) {
     ['sign']
   )
   const message = encoder.encode(salts.join('\n'))
-  const signature = await crypto.subtle.sign('HMAC', key, message)
+  return crypto.subtle.sign('HMAC', key, message)
+}
+
+export async function getCipher(secret, ...salts) {
+  const signature = await sign(secret, salts)
   const signatureBytes = Array.from(new Uint8Array(signature))
   return Array.from(signatureBytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+// Encryption key derived from the secret and salts, so that keys for
+// different purposes are independent of each other
+export async function getDerivedKey(secret, ...salts) {
+  const signature = await sign(secret, salts)
+  return crypto.subtle.importKey('raw', signature, { name: 'AES-GCM' }, false, [
+    'encrypt',
+    'decrypt'
+  ])
 }
 
 // Uint8Array.prototype.toBase64 and Uint8Array.fromBase64 are not supported
@@ -127,31 +141,44 @@ function base64ToBytes(base64) {
   return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
 }
 
-export async function packValue(data, secret) {
+// Compressed and encrypted JSON of the data: 12 bytes of the IV followed by
+// the AES-GCM ciphertext. Additional data, if any, is authenticated as well.
+export async function packBytes(data, key, additionalData) {
   const stringified = JSON.stringify(data)
   const compressed = await new Promise((resolve, reject) => {
     gzip(encoder.encode(stringified), (err, result) => (err ? reject(err) : resolve(result)))
   })
-  const key = await getKeyFromSecret(secret)
   const iv = crypto.getRandomValues(new Uint8Array(12))
-  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, compressed)
+  const params = { name: 'AES-GCM', iv }
+  if (additionalData) params.additionalData = encoder.encode(additionalData)
+  const encrypted = await crypto.subtle.encrypt(params, key, compressed)
   const combined = new Uint8Array(iv.length + encrypted.byteLength)
   combined.set(iv, 0)
   combined.set(new Uint8Array(encrypted), iv.length)
-  return bytesToBase64(combined)
+  return combined
 }
 
-export async function unpackValue(data, secret) {
-  const combined = base64ToBytes(data)
+export async function unpackBytes(combined, key, additionalData) {
   const iv = combined.slice(0, 12)
   const encrypted = combined.slice(12)
-  const key = await getKeyFromSecret(secret)
-  const compressed = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, encrypted)
+  const params = { name: 'AES-GCM', iv }
+  if (additionalData) params.additionalData = encoder.encode(additionalData)
+  const compressed = await crypto.subtle.decrypt(params, key, encrypted)
   const decompressed = await new Promise((resolve, reject) => {
     gunzip(new Uint8Array(compressed), (err, result) => (err ? reject(err) : resolve(result)))
   })
   const stringified = decoder.decode(decompressed)
   return JSON.parse(stringified)
+}
+
+export async function packValue(data, secret) {
+  const key = await getKeyFromSecret(secret)
+  return bytesToBase64(await packBytes(data, key))
+}
+
+export async function unpackValue(data, secret) {
+  const key = await getKeyFromSecret(secret)
+  return unpackBytes(base64ToBytes(data), key)
 }
 
 export function sortByFields(items, fields = []) {
