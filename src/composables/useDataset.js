@@ -2,8 +2,18 @@ import { Mutex } from 'async-mutex'
 import { computed, ref, shallowRef, toRaw, triggerRef, watch } from 'vue'
 import * as z from 'zod'
 
+import database from '@/database'
 import storage from '@/storage'
-import { getCipher, getNonce, getNonceTimestamp, getRandomId, sortByFields } from '@/utils'
+import {
+  getCipher,
+  getDerivedKey,
+  getNonce,
+  getNonceTimestamp,
+  getRandomId,
+  packBytes,
+  sortByFields,
+  unpackBytes
+} from '@/utils'
 
 import { useBlob } from './useBlob'
 
@@ -53,16 +63,18 @@ const constraintsSchema = z.record(
   )
 )
 
-// Local copies of the most recently opened splits kept in the storage
+// Local copies of the most recently opened splits kept in the database
 const STATES_KEPT = 50
 // Local copies kept when the storage is full
 const STATES_KEPT_ON_OVERFLOW = 5
 
-const ACCESSED_STORAGE_KEY = 'split:accessed'
-const STATE_STORAGE_KEY_PATTERN = /^split:([0-9a-f]{64}):state$/
+// Older versions kept local copies unencrypted in the local storage
+const LEGACY_ACCESSED_STORAGE_KEY = 'split:accessed'
+const LEGACY_STATE_STORAGE_KEY_PATTERN = /^split:([0-9a-f]{64}):state$/
+const LEGACY_STORAGE_KEY_PATTERN = /^split:([0-9a-f]{64}):/
 
-const getStateStorageKey = (anchor) => `split:${anchor}:state`
-const getPropertyStorageKey = (anchor, name) => `split:${anchor}:property:${name}`
+const getLegacyStateStorageKey = (anchor) => `split:${anchor}:state`
+const getLegacyPropertyStorageKeyPrefix = (anchor) => `split:${anchor}:property:`
 
 let context
 
@@ -71,6 +83,11 @@ function useContext() {
 
   let constraints = undefined
   let anchor = undefined
+  let key = undefined
+  let properties = {}
+
+  // Local copies are written one after another in order of the changes
+  let saving = Promise.resolve()
 
   const dataset = shallowRef({})
   const version = ref(undefined)
@@ -110,21 +127,37 @@ function useContext() {
     return await getCipher(secret, CIPHER_SALT, 'STORAGE_ANCHOR')
   }
 
+  async function getStorageKey(secret) {
+    return await getDerivedKey(secret, CIPHER_SALT, 'STORAGE_KEY')
+  }
+
   async function connect(secret) {
     const release = await mutex.acquire()
     try {
-      anchor = await getStorageAnchor(secret)
+      const nextAnchor = await getStorageAnchor(secret)
+      const nextKey = await getStorageKey(secret)
+      // Finish writing the local copy of the previous split
+      await saving
+      anchor = nextAnchor
+      key = nextKey
+      properties = {}
       changed.value = undefined
       version.value = undefined
       dataset.value = {}
       datasetIndex = {}
-      touch()
-      prune()
-      const state = storage.get(getStateStorageKey(anchor)) ?? {}
-      merge(state.dataset)
-      version.value = state.version
-      changed.value = state.changed
+      const legacy = takeLegacyState()
+      dropLegacyStates()
+      await database.touch(anchor)
+      await database.prune(STATES_KEPT, anchor)
+      const state = await load()
+      // Both copies may have changes, which are merged as the remote ones
+      merge(state?.dataset)
+      merge(legacy?.dataset)
+      version.value = state ? state.version : legacy?.version
+      changed.value = Math.max(state?.changed ?? 0, legacy?.changed ?? 0) || undefined
+      properties = { ...legacy?.properties, ...state?.properties }
       triggerRef(dataset)
+      if (legacy && (await save())) dropLegacyState(anchor)
       await blob.connect({ secret })
     } catch (err) {
       console.warn('Unable to connect the dataset:', err.message)
@@ -133,60 +166,88 @@ function useContext() {
     }
   }
 
-  function save() {
-    if (!anchor) return
-    const key = getStateStorageKey(anchor)
-    const state = {
-      dataset: dataset.value,
-      version: version.value,
-      changed: changed.value
+  async function load() {
+    try {
+      const data = await database.getState(anchor)
+      if (data) return await unpackBytes(data, key, anchor)
+    } catch (err) {
+      console.warn('Unable to load the split locally:', err.message)
     }
-    if (storage.set(key, state)) return
-    // The storage is probably full, so drop older local copies and retry
-    prune(STATES_KEPT_ON_OVERFLOW)
-    if (!storage.set(key, state)) console.error('Unable to save the split locally')
   }
 
-  function touch() {
-    const accessed = storage.get(ACCESSED_STORAGE_KEY) ?? {}
-    accessed[anchor] = Date.now()
-    storage.set(ACCESSED_STORAGE_KEY, accessed)
+  async function store(anchor, key, state) {
+    try {
+      if (!(await database.available())) return false
+      const data = await packBytes(state, key, anchor)
+      const dirty = !!state.changed
+      if (await database.setState(anchor, data, dirty)) return true
+      // The storage is probably full, so drop older local copies and retry
+      await database.prune(STATES_KEPT_ON_OVERFLOW, anchor)
+      if (await database.setState(anchor, data, dirty)) return true
+    } catch (err) {
+      console.warn('Unable to pack the split:', err.message)
+    }
+    console.error('Unable to save the split locally')
+    return false
   }
 
-  // Remove local copies of splits opened long ago, except the current one and
-  // the ones having changes not synchronized yet
-  function prune(keep = STATES_KEPT) {
-    const accessed = storage.get(ACCESSED_STORAGE_KEY) ?? {}
+  // The state is taken when the write starts, so the latest write always has
+  // the latest state, even when the previous ones are not finished yet
+  function save() {
+    if (!anchor) return Promise.resolve(false)
+    const target = anchor
+    const result = saving.then(() => {
+      if (target !== anchor) return false
+      const state = {
+        dataset: dataset.value,
+        version: version.value,
+        changed: changed.value,
+        properties
+      }
+      return store(anchor, key, state)
+    })
+    saving = result
+    return result
+  }
+
+  // Older versions kept the properties in separate keys of the local storage
+  function takeLegacyState() {
+    const state = storage.get(getLegacyStateStorageKey(anchor))
+    if (!state) return
+    const prefix = getLegacyPropertyStorageKeyPrefix(anchor)
+    const properties = {}
+    for (const key of storage.keys()) {
+      if (key.startsWith(prefix)) properties[key.slice(prefix.length)] = storage.get(key)
+    }
+    return { ...state, properties }
+  }
+
+  function dropLegacyState(value) {
+    for (const key of storage.keys()) {
+      if (key.match(LEGACY_STORAGE_KEY_PATTERN)?.[1] === value) storage.remove(key)
+    }
+  }
+
+  // Drop unencrypted local copies of other splits, except the ones having
+  // changes not synchronized yet, which are moved once their splits are opened
+  function dropLegacyStates() {
     const keys = storage.keys()
-    const anchors = keys
-      .map((key) => key.match(STATE_STORAGE_KEY_PATTERN)?.[1])
-      .filter((value) => value && value !== anchor)
-      .sort((left, right) => (accessed[right] ?? 0) - (accessed[left] ?? 0))
-    const removed = new Set()
-    for (const value of anchors.slice(keep)) {
-      if (storage.get(getStateStorageKey(value))?.changed) continue
-      removed.add(value)
+    const kept = new Set([anchor])
+    for (const key of keys) {
+      const value = key.match(LEGACY_STATE_STORAGE_KEY_PATTERN)?.[1]
+      if (value && storage.get(key)?.changed) kept.add(value)
     }
     for (const key of keys) {
-      const value = key.match(/^split:([0-9a-f]{64}):/)?.[1]
-      if (removed.has(value)) storage.remove(key)
+      const value = key.match(LEGACY_STORAGE_KEY_PATTERN)?.[1]
+      if (value && !kept.has(value)) storage.remove(key)
     }
-    // Forget removed copies as well as the ones gone some other way
-    const known = new Set([anchor, ...anchors])
-    const forgotten = Object.keys(accessed).filter(
-      (value) => removed.has(value) || !known.has(value)
-    )
-    if (forgotten.length === 0) return
-    forgotten.forEach((value) => delete accessed[value])
-    storage.set(ACCESSED_STORAGE_KEY, accessed)
+    storage.remove(LEGACY_ACCESSED_STORAGE_KEY)
   }
 
   async function clone(secret) {
     const anchor = await getStorageAnchor(secret)
-    storage.set(getStateStorageKey(anchor), {
-      dataset: dataset.value,
-      changed: Date.now()
-    })
+    const key = await getStorageKey(secret)
+    await store(anchor, key, { dataset: dataset.value, changed: Date.now() })
   }
 
   watch(
@@ -414,13 +475,13 @@ function useContext() {
   const locals = {
     set(name, value) {
       if (!anchor) return
-      const storageKey = getPropertyStorageKey(anchor, name)
-      if (value) storage.set(storageKey, value)
-      else storage.remove(storageKey)
+      if (value) properties[name] = value
+      else delete properties[name]
+      save()
     },
     get(name) {
       if (!anchor) return
-      return storage.get(getPropertyStorageKey(anchor, name))
+      return properties[name]
     }
   }
 
