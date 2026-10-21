@@ -1,5 +1,6 @@
 // Renders the link preview image from its SVG source using the application font.
 // Run with `npm run og-image` and commit the result along with the source.
+// Bump the image version in index.html then, since link previews cache images by URL.
 // Needs Chrome or Chromium, its binary can be set by the CHROME variable.
 
 import { execFileSync } from 'node:child_process'
