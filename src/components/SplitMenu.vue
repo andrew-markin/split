@@ -74,6 +74,12 @@
         </q-item-section>
         <q-item-section no-wrap>{{ $t('menu.linkedinProfile') }}</q-item-section>
       </q-item>
+      <q-item v-close-popup clickable @click="showPrivacy()">
+        <q-item-section side>
+          <q-icon :name="mdiShieldLockOutline" />
+        </q-item-section>
+        <q-item-section no-wrap>{{ $t('privacy.title') }}</q-item-section>
+      </q-item>
     </q-list>
   </q-menu>
 </template>
@@ -88,12 +94,15 @@ import {
   mdiLinkVariant,
   mdiOpenInNew,
   mdiShareVariant,
+  mdiShieldLockOutline,
   mdiThemeLightDark,
   mdiTranslate
 } from '@quasar/extras/mdi-v7'
 import copyToClipboard from 'copy-to-clipboard'
 import { useRoute } from 'vue-router'
 
+import PrivacyDialog from '@/components/PrivacyDialog.vue'
+import { useDialogs } from '@/composables/useDialogs'
 import { useScreen } from '@/composables/useScreen'
 import { useSplit } from '@/composables/useSplit'
 import { useThemes } from '@/composables/useThemes'
@@ -103,6 +112,7 @@ import { getRandomSecret } from '@/utils'
 
 const route = useRoute()
 
+const { exec } = useDialogs()
 const { mobile } = useScreen()
 const { clone } = useSplit()
 const themes = useThemes()
@@ -139,5 +149,9 @@ async function cloneSplit() {
 
 function toggleTheme() {
   themes.toggle()
+}
+
+async function showPrivacy() {
+  await exec(PrivacyDialog)
 }
 </script>

@@ -27,7 +27,10 @@
       <settlement-section />
       <footer>
         <block-container class="q-px-md q-pt-lg text-caption muted-2">
-          {{ $t('split.about') }}
+          <div>{{ $t('split.about') }}</div>
+          <a class="q-mt-sm inline-block text-primary" href="" @click.prevent="showPrivacy()">
+            {{ $t('privacy.title') }}
+          </a>
         </block-container>
       </footer>
     </div>
@@ -45,6 +48,7 @@ import BlockContainer from '@/components/BlockContainer.vue'
 import CategorySection from '@/components/CategorySection.vue'
 import ExpenseSection from '@/components/ExpenseSection.vue'
 import ParticipantSection from '@/components/ParticipantSection.vue'
+import PrivacyDialog from '@/components/PrivacyDialog.vue'
 import ScrollArea from '@/components/ScrollArea.vue'
 import SettlementSection from '@/components/SettlementSection.vue'
 import SplitDialog from '@/components/SplitDialog.vue'
@@ -79,6 +83,10 @@ watch(
 
 async function edit() {
   await exec(SplitDialog)
+}
+
+async function showPrivacy() {
+  await exec(PrivacyDialog)
 }
 </script>
 
