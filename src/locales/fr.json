@@ -63,6 +63,7 @@
   "settlement.plural": "Règlements",
   "settlement.transfer.comment.hint": "Par ex. « Envoyé par Lydia. Merci ! »",
   "settlement": "Règlement",
+  "split.about": "Split est une application gratuite et open source pour partager les dépenses communes entre amis, en famille ou entre collègues. Aucune inscription n'est nécessaire : partagez le lien du split, ajoutez ensemble les participants, les catégories et les dépenses, et obtenez les règlements avec le moins de virements possible. Toutes les données sont chiffrées dans le navigateur, seules les personnes ayant le lien peuvent donc les lire.",
   "split.title.hint": "Par ex. « Dépenses du bureau » ou « Soirée d'Halloween »",
   "split.title": "Titre",
   "split.untitled": "Sans titre",

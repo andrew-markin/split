@@ -63,6 +63,7 @@
   "settlement.plural": "Acertos",
   "settlement.transfer.comment.hint": "Ex.: \"Enviado via Pix. Obrigado!\"",
   "settlement": "Acerto",
+  "split.about": "Split é um aplicativo gratuito e de código aberto para dividir despesas compartilhadas com amigos, família ou colegas. Não é preciso se cadastrar: basta compartilhar o link do split para adicionar juntos participantes, categorias e despesas e obter os acertos com o menor número possível de transferências. Todos os dados são criptografados no navegador, então só quem tem o link pode lê-los.",
   "split.title.hint": "Ex.: \"Despesas do escritório\" ou \"Festa junina\"",
   "split.title": "Título",
   "split.untitled": "Sem título",

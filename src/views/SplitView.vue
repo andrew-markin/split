@@ -25,6 +25,11 @@
       <expense-section />
       <transfer-section />
       <settlement-section />
+      <footer>
+        <block-container class="q-px-md q-pt-lg text-caption muted-2">
+          {{ $t('split.about') }}
+        </block-container>
+      </footer>
     </div>
   </scroll-area>
 </template>

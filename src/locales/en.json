@@ -63,6 +63,7 @@
   "settlement.plural": "Settlements",
   "settlement.transfer.comment.hint": "E.g. \"Sent via PayPal. Thanks!\"",
   "settlement": "Settlement",
+  "split.about": "Split is a free open-source app for splitting shared expenses with friends, family or colleagues. No sign-up is needed: share the link to the split, add participants, categories and expenses together, and get the settlements with as few transfers as possible. All the data is encrypted in the browser, so only those having the link can read it.",
   "split.title.hint": "E.g. \"Office Expenses\" or \"Halloween Party\"",
   "split.title": "Title",
   "split.untitled": "Untitled",

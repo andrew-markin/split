@@ -63,6 +63,7 @@
   "settlement.plural": "Liquidaciones",
   "settlement.transfer.comment.hint": "Por ejemplo: \"Enviado por Bizum. ¡Gracias!\"",
   "settlement": "Liquidación",
+  "split.about": "Split es una aplicación gratuita y de código abierto para dividir gastos compartidos con amigos, familia o compañeros de trabajo. No hace falta registrarse: basta con compartir el enlace del split para añadir juntos participantes, categorías y gastos y obtener las liquidaciones con el menor número de transferencias posible. Todos los datos se cifran en el navegador, así que solo quienes tienen el enlace pueden leerlos.",
   "split.title.hint": "Por ejemplo: \"Gastos de oficina\" o \"Fiesta de Halloween\"",
   "split.title": "Título",
   "split.untitled": "Sin título",
