@@ -7,6 +7,12 @@
         </q-item-section>
         <q-item-section no-wrap>{{ $t('menu.copyLink') }}</q-item-section>
       </q-item>
+      <q-item v-if="shareAvailable" v-close-popup clickable @click="shareLink()">
+        <q-item-section side>
+          <q-icon :name="mdiShareVariant" />
+        </q-item-section>
+        <q-item-section no-wrap>{{ $t('menu.shareLink') }}</q-item-section>
+      </q-item>
       <q-item v-close-popup clickable @click="newSplit()">
         <q-item-section side>
           <q-icon :name="mdiOpenInNew" />
@@ -81,6 +87,7 @@ import {
   mdiLinkedin,
   mdiLinkVariant,
   mdiOpenInNew,
+  mdiShareVariant,
   mdiThemeLightDark,
   mdiTranslate
 } from '@quasar/extras/mdi-v7'
@@ -100,6 +107,8 @@ const { mobile } = useScreen()
 const { clone } = useSplit()
 const themes = useThemes()
 
+const shareAvailable = typeof navigator.share === 'function'
+
 function getSplitLink(secret) {
   const route = router.resolve({ name: 'split', params: { secret } })
   return new URL(route.href, window.location.href).href
@@ -107,6 +116,15 @@ function getSplitLink(secret) {
 
 async function copyLink() {
   await copyToClipboard(getSplitLink(route.params.secret))
+}
+
+async function shareLink() {
+  try {
+    await navigator.share({ title: document.title, url: getSplitLink(route.params.secret) })
+  } catch (err) {
+    // Closing the share sheet rejects the promise too
+    if (err.name !== 'AbortError') console.warn('Unable to share the link:', err.message)
+  }
 }
 
 function newSplit() {

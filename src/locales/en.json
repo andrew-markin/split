@@ -37,6 +37,7 @@
   "menu.githubRepository": "GitHub repository",
   "menu.linkedinProfile": "LinkedIn profile",
   "menu.newSplit": "New Split",
+  "menu.shareLink": "Share link",
   "menu.toggleColorTheme": "Toggle color theme",
   "participant.name.hint": "E.g. \"James P.\" or \"Mary J.\"",
   "participant.name.required.error": "Name is required",

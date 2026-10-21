@@ -37,6 +37,7 @@
   "menu.githubRepository": "Репозиторий на GitHub",
   "menu.linkedinProfile": "Профиль на LinkedIn",
   "menu.newSplit": "Новый Сплит",
+  "menu.shareLink": "Поделиться ссылкой",
   "menu.toggleColorTheme": "Поменять цветовую тему",
   "participant.name.hint": "Например: \"Владимир К.\" или \"Елена С.\"",
   "participant.name.required.error": "Укажите имя",
