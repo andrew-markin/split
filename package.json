@@ -19,7 +19,8 @@
     "check:format": "prettier --check src/",
     "format": "prettier --write --experimental-cli src/",
     "audit": "npm audit --omit=dev",
-    "pattern": "node scripts/generate-pattern.js"
+    "pattern": "node scripts/generate-pattern.js",
+    "og-image": "node scripts/render-og-image.js"
   },
   "dependencies": {
     "@quasar/extras": "^2.1.0",

@@ -67,15 +67,16 @@ These values are embedded into the public application bundle, so they aren't sec
 ### Commands
 
 ```sh
-npm install     # Install dependencies
-npm run dev     # Start the development server at http://localhost:8085
-npm test        # Run unit tests
-npm run check   # Run linters and check formatting
-npm run lint    # Fix linting issues
-npm run format  # Format the source code
-npm run audit   # Check production dependencies for vulnerabilities
-npm run build   # Build for production into dist/
-npm run pattern # Regenerate the background pattern in public/pattern.svg
+npm install      # Install dependencies
+npm run dev      # Start the development server at http://localhost:8085
+npm test         # Run unit tests
+npm run check    # Run linters and check formatting
+npm run lint     # Fix linting issues
+npm run format   # Format the source code
+npm run audit    # Check production dependencies for vulnerabilities
+npm run build    # Build for production into dist/
+npm run pattern  # Regenerate the background pattern in public/pattern.svg
+npm run og-image # Render the link preview image into public/og-image.png
 ```
 
 Integration tests of the synchronization run against the [Blobs](https://github.com/andrew-markin/blobs) project located next to this one or at `BLOBS_PATH`, and are skipped when it's missing. The project needs its dependencies installed, but not a running server: the tests start their own one with a temporary storage, token and salt.
