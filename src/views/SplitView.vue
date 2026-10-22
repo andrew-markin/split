@@ -1,7 +1,14 @@
 <template>
   <div ref="headerRef" class="header column justify-center text-white">
     <block-container class="text-h5 q-px-md row no-wrap items-center">
-      <div class="non-selectable cursor-pointer ellipsis" @click="edit()">
+      <div
+        class="non-selectable cursor-pointer ellipsis"
+        role="button"
+        tabindex="0"
+        @click="edit()"
+        @keydown.enter="edit()"
+        @keydown.space.prevent="edit()"
+      >
         <span class="text-weight-bold q-mr-sm">{{ $t('split') }}:</span>
         <span v-if="title">{{ title }}</span>
         <span v-else class="muted-2">{{ $t('split.untitled') }}</span>

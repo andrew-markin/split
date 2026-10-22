@@ -34,8 +34,11 @@
           <tr
             v-for="(item, index) in items"
             :key="itemKey ? item[itemKey] : index"
-            class="non-selectable cursor-pointer"
+            class="non-selectable cursor-pointer focus-outline"
+            tabindex="0"
             @click="$emit('edit', item)"
+            @keydown.enter.self="$emit('edit', item)"
+            @keydown.space.self.prevent="$emit('edit', item)"
           >
             <td>
               <q-checkbox
@@ -67,8 +70,11 @@
           flat
           bordered
           square
-          class="relative-position borders-x-none"
+          class="relative-position borders-x-none focus-outline"
+          tabindex="0"
           @click="$emit('edit', item)"
+          @keydown.enter.self="$emit('edit', item)"
+          @keydown.space.self.prevent="$emit('edit', item)"
         >
           <q-card-section class="column no-wrap q-gutter-xs">
             <div v-for="field in fields" :key="field.name">
@@ -163,6 +169,10 @@ $negative-space-sm-y: map-get($space-sm, y) * -1;
 .mx-negative-md {
   margin-left: $negative-space-md-x;
   margin-right: $negative-space-md-x;
+}
+.focus-outline:focus-visible {
+  outline: 2px solid var(--q-primary);
+  outline-offset: -2px;
 }
 .borders-x-none {
   border-left: none;
