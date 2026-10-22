@@ -15,3 +15,6 @@ dist/
 
 # Claude Code
 .claude/launch.json
+
+# Demo videos
+/videos/
