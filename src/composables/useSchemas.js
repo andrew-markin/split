@@ -15,7 +15,7 @@ export function useSchemas() {
   function stringSchema(requiredMessage) {
     let schema = z.string()
     if (requiredMessage) schema = schema.min(1, requiredMessage)
-    return schema.regex(/^[\p{L}\p{P}\d\s]*$/u, t('string.constraints.error'))
+    return schema.regex(/^[\p{L}\p{P}\d\s+]*$/u, t('string.constraints.error'))
   }
 
   return { amountSchema, stringSchema }
