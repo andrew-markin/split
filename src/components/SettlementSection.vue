@@ -13,6 +13,7 @@
         flat
         round
         :icon="mdiContentCopy"
+        :aria-label="$t('settlement.copy')"
         @click="copy(selection)"
       />
     </template>

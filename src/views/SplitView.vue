@@ -12,7 +12,7 @@
         </transition>
       </div>
       <q-space />
-      <q-btn unelevated :icon="mdiMenu" class="q-pa-sm btn-menu">
+      <q-btn unelevated :icon="mdiMenu" :aria-label="$t('menu')" class="q-pa-sm btn-menu">
         <q-badge
           v-if="anyUnseen"
           color="warning"

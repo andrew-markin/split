@@ -3,7 +3,7 @@
     <q-card-section class="row no-wrap items-center q-pb-none">
       <div class="text-h5 muted-1">{{ title }}</div>
       <q-space />
-      <q-btn flat round :icon="mdiClose" @click="cancel()" />
+      <q-btn flat round :icon="mdiClose" :aria-label="$t('close')" @click="cancel()" />
     </q-card-section>
     <q-card-section>
       <slot></slot>

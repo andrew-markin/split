@@ -2,18 +2,20 @@
   <split-section
     :title="$t('category.plural')"
     :fields="fields"
+    item-title="name"
     :items="categories"
     :no-data-label="$t('category.none')"
     @edit="edit"
   >
     <template #buttons="{ selection }">
-      <q-btn flat round :icon="mdiPlus" @click="edit()" />
+      <q-btn flat round :icon="mdiPlus" :aria-label="$t('category.new')" @click="edit()" />
       <q-btn
         v-if="selection.length > 0"
         flat
         round
         color="negative"
         :icon="mdiTrashCanOutline"
+        :aria-label="$t('section.items.remove')"
         @click="remove(selection)"
       />
     </template>
