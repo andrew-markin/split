@@ -78,7 +78,18 @@
         <q-item-section side>
           <q-icon :name="mdiShieldLockOutline" />
         </q-item-section>
-        <q-item-section no-wrap>{{ $t('privacy.title') }}</q-item-section>
+        <q-item-section no-wrap>
+          <div>
+            {{ $t('privacy.title') }}
+            <q-badge
+              v-if="unseen('privacy')"
+              color="warning"
+              rounded
+              align="top"
+              class="hint-badge animated heartBeat infinite"
+            />
+          </div>
+        </q-item-section>
       </q-item>
     </q-list>
   </q-menu>
@@ -103,6 +114,7 @@ import { useRoute } from 'vue-router'
 
 import PrivacyDialog from '@/components/PrivacyDialog.vue'
 import { useDialogs } from '@/composables/useDialogs'
+import { useHints } from '@/composables/useHints'
 import { useScreen } from '@/composables/useScreen'
 import { useSplit } from '@/composables/useSplit'
 import { useThemes } from '@/composables/useThemes'
@@ -113,6 +125,7 @@ import { getRandomSecret } from '@/utils'
 const route = useRoute()
 
 const { exec } = useDialogs()
+const { unseen } = useHints()
 const { mobile } = useScreen()
 const { clone } = useSplit()
 const themes = useThemes()

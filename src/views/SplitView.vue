@@ -13,6 +13,13 @@
       </div>
       <q-space />
       <q-btn unelevated :icon="mdiMenu" class="q-pa-sm btn-menu">
+        <q-badge
+          v-if="anyUnseen"
+          color="warning"
+          floating
+          rounded
+          class="hint-badge animated heartBeat infinite"
+        />
         <split-menu />
       </q-btn>
     </block-container>
@@ -55,6 +62,7 @@ import SplitDialog from '@/components/SplitDialog.vue'
 import SplitMenu from '@/components/SplitMenu.vue'
 import TransferSection from '@/components/TransferSection.vue'
 import { useDialogs } from '@/composables/useDialogs'
+import { useHints } from '@/composables/useHints'
 import { useSplit } from '@/composables/useSplit'
 
 const headerRef = ref(null)
@@ -72,6 +80,7 @@ const { t } = useI18n()
 
 const { connect, title, modified } = useSplit()
 const { exec } = useDialogs()
+const { anyUnseen } = useHints()
 
 useMeta(() => ({ title: `${t('split')}: ${title.value || t('split.untitled')}` }))
 

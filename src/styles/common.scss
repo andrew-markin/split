@@ -72,3 +72,8 @@
   background: $primary;
   color: #fff;
 }
+
+// Calm heartbeat of the badges hinting at the things worth seeing
+.hint-badge {
+  --animate-duration: 1.5s;
+}

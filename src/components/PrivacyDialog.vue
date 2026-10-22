@@ -15,11 +15,14 @@
 </template>
 
 <script setup>
+import { useHints } from '@/composables/useHints'
 import { email } from '@/links'
 
 import DialogFrame from './DialogFrame.vue'
 
 const sections = ['tracking', 'browser', 'server', 'logs', 'operator']
+
+useHints().markSeen('privacy')
 </script>
 
 <style scoped>
