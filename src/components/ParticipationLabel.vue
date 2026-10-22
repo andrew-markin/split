@@ -4,7 +4,7 @@
     v-if="showRate || rate !== 100"
     :class="{ 'text-cold': rate < 100, 'text-hot': rate > 100 }"
   >
-    <span :class="rate === 100 ? 'muted-3' : 'muted-1'"> ({{ rate }}%)</span>
+    <span :class="rate === 100 ? 'muted-2' : 'muted-1'"> ({{ rate }}%)</span>
   </span>
 </template>
 

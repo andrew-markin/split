@@ -36,13 +36,7 @@
 
 .muted-2 {
   @include dark-theme-force {
-    color: color-mix(in srgb, currentColor 60%, transparent);
-  }
-}
-
-.muted-3 {
-  @include dark-theme-force {
-    color: color-mix(in srgb, currentColor 25%, transparent);
+    color: color-mix(in srgb, currentColor 65%, transparent);
   }
 }
 

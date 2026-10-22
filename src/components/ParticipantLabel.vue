@@ -17,7 +17,7 @@ defineOptions({ inheritAttrs: false })
 const { id } = defineProps({
   id: { type: String, default: undefined },
   placeholder: { type: String, default: undefined },
-  placeholderClass: { type: String, default: 'muted-3' }
+  placeholderClass: { type: String, default: 'muted-2' }
 })
 
 const { participantById } = useSplit()

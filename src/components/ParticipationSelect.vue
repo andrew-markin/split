@@ -131,6 +131,11 @@ $checkbox-size: 42px;
   margin-left: $checkbox-size;
 }
 .inactive {
-  opacity: 0.5;
+  opacity: 0.7;
+  // The whole option is faded already, so its rate isn't muted twice
+  :deep(.muted-1),
+  :deep(.muted-2) {
+    color: inherit;
+  }
 }
 </style>

@@ -55,7 +55,7 @@
             </td>
           </tr>
           <tr v-if="items.length === 0">
-            <td :colspan="fields.length + 1" class="muted-2 text-center q-td--no-hover">
+            <td :colspan="fields.length + 1" class="muted-1 text-center q-td--no-hover">
               {{ noDataLabel ?? $t('section.items.none') }}
             </td>
           </tr>
@@ -99,7 +99,7 @@
           square
           class="relative-position borders-x-none"
         >
-          <q-card-section class="muted-2 text-center no-wrap">
+          <q-card-section class="muted-1 text-center no-wrap">
             {{ noDataLabel ?? $t('section.items.none') }}
           </q-card-section>
         </q-card>

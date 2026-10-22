@@ -21,3 +21,16 @@
     }
   }
 }
+
+// The primary color is too dark for text on the dark background, so the
+// outlined buttons, the links and the labels of the focused fields get a
+// lighter shade of it
+.body--dark {
+  .text-primary {
+    color: $special-dark-color !important;
+  }
+
+  .q-field__control {
+    color: $special-dark-color;
+  }
+}

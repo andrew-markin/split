@@ -11,7 +11,7 @@
       >
         <span class="text-weight-bold q-mr-sm">{{ $t('split') }}:</span>
         <span v-if="title">{{ title }}</span>
-        <span v-else class="muted-2">{{ $t('split.untitled') }}</span>
+        <span v-else class="muted-1">{{ $t('split.untitled') }}</span>
       </div>
       <div class="relative-position full-height q-mx-md">
         <transition leave-active-class="animated zoomOut">
@@ -48,7 +48,7 @@
       <footer>
         <block-container class="q-px-md q-pt-lg text-caption muted-2">
           <div>{{ $t('split.about') }}</div>
-          <a class="q-mt-sm inline-block text-primary" href="" @click.prevent="showPrivacy()">
+          <a class="q-mt-sm inline-block text-special" href="" @click.prevent="showPrivacy()">
             {{ $t('privacy.title') }}
           </a>
         </block-container>
