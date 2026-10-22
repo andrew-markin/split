@@ -137,6 +137,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 
 import PrivacyDialog from '@/components/PrivacyDialog.vue'
+import { useAnnouncer } from '@/composables/useAnnouncer'
 import { useDialogs } from '@/composables/useDialogs'
 import { useHints } from '@/composables/useHints'
 import { useScreen } from '@/composables/useScreen'
@@ -148,6 +149,7 @@ import { getRandomSecret } from '@/utils'
 
 const route = useRoute()
 
+const { announce } = useAnnouncer()
 const { exec } = useDialogs()
 const { unseen, markSeen } = useHints()
 const { mobile } = useScreen()
@@ -155,6 +157,7 @@ const { clone } = useSplit()
 const themes = useThemes()
 
 const i18n = useI18n()
+const { t } = i18n
 const demo = computed(() => demos[i18n.locale.value] || demos.en)
 
 const shareAvailable = typeof navigator.share === 'function'
@@ -166,6 +169,7 @@ function getSplitLink(secret) {
 
 async function copyLink() {
   await copyToClipboard(getSplitLink(route.params.secret))
+  announce(t('copied'))
 }
 
 async function shareLink() {

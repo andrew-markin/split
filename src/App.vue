@@ -2,6 +2,7 @@
   <div class="fullscreen app loading" :class="{ ready }">
     <router-view />
     <dialog-stack />
+    <div class="sr-only" aria-live="polite">{{ announcement }}</div>
   </div>
 </template>
 
@@ -9,9 +10,12 @@
 import { onMounted, ref } from 'vue'
 
 import DialogStack from '@/components/DialogStack.vue'
+import { useAnnouncer } from '@/composables/useAnnouncer'
 import { useThemes } from '@/composables/useThemes'
 
 const ready = ref(false)
+
+const { message: announcement } = useAnnouncer()
 
 const themes = useThemes()
 onMounted(() => {

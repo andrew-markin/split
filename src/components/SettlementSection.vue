@@ -14,6 +14,7 @@
         round
         :icon="mdiContentCopy"
         :aria-label="$t('settlement.copy')"
+        :announcement="$t('copied')"
         @click="copy(selection)"
       />
     </template>
