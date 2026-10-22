@@ -62,6 +62,23 @@
         </q-menu>
       </q-item>
       <q-separator />
+      <q-item v-close-popup clickable :href="demo" target="_blank" @click="markSeen('demo')">
+        <q-item-section side>
+          <q-icon :name="mdiYoutube" />
+        </q-item-section>
+        <q-item-section no-wrap>
+          <div>
+            {{ $t('menu.youtubeDemo') }}
+            <q-badge
+              v-if="unseen('demo')"
+              color="warning"
+              rounded
+              align="top"
+              class="hint-badge animated heartBeat infinite"
+            />
+          </div>
+        </q-item-section>
+      </q-item>
       <q-item v-close-popup clickable :href="github" target="_blank">
         <q-item-section side>
           <q-icon :name="mdiGithub" />
@@ -107,9 +124,12 @@ import {
   mdiShareVariant,
   mdiShieldLockOutline,
   mdiThemeLightDark,
-  mdiTranslate
+  mdiTranslate,
+  mdiYoutube
 } from '@quasar/extras/mdi-v7'
 import copyToClipboard from 'copy-to-clipboard'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 
 import PrivacyDialog from '@/components/PrivacyDialog.vue'
@@ -118,17 +138,20 @@ import { useHints } from '@/composables/useHints'
 import { useScreen } from '@/composables/useScreen'
 import { useSplit } from '@/composables/useSplit'
 import { useThemes } from '@/composables/useThemes'
-import { github, linkedin } from '@/links'
+import { demos, github, linkedin } from '@/links'
 import router from '@/router'
 import { getRandomSecret } from '@/utils'
 
 const route = useRoute()
 
 const { exec } = useDialogs()
-const { unseen } = useHints()
+const { unseen, markSeen } = useHints()
 const { mobile } = useScreen()
 const { clone } = useSplit()
 const themes = useThemes()
+
+const i18n = useI18n()
+const demo = computed(() => demos[i18n.locale.value] || demos.en)
 
 const shareAvailable = typeof navigator.share === 'function'
 

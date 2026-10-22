@@ -7,6 +7,12 @@ Split is a simple open-source application for common expenses splitting. Splits 
 
 The application is available at [split.mayfleet.com](https://split.mayfleet.com/).
 
+## Demo
+
+[![Split demo](https://img.youtube.com/vi/3Vx7rchIyM0/maxresdefault.jpg)](https://youtu.be/3Vx7rchIyM0)
+
+The demo is also available in [Russian](https://youtu.be/kPasxOhwZOM), [Spanish](https://youtu.be/evfkLOdhwcc), [Brazilian Portuguese](https://youtu.be/lED-DdGa9zI), [German](https://youtu.be/Fo9pwqJyoUI) and [French](https://youtu.be/BrmCogXN8i0).
+
 ## Features
 
 - Participants with transfer preferences, e.g. a bank account or a payment service to send money to.
