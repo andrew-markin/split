@@ -53,6 +53,8 @@
               v-close-popup="2"
               clickable
               :active="$i18n.locale === locale"
+              role="menuitemradio"
+              :aria-checked="$i18n.locale === locale"
               active-class="bg-primary text-white text-bold"
               @click="$i18n.locale = locale"
             >
@@ -76,6 +78,7 @@
               align="top"
               class="hint-badge animated heartBeat infinite"
             />
+            <span v-if="unseen('demo')" class="sr-only">{{ $t('hint.new') }}</span>
           </div>
         </q-item-section>
       </q-item>
@@ -105,6 +108,7 @@
               align="top"
               class="hint-badge animated heartBeat infinite"
             />
+            <span v-if="unseen('privacy')" class="sr-only">{{ $t('hint.new') }}</span>
           </div>
         </q-item-section>
       </q-item>

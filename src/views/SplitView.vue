@@ -17,9 +17,15 @@
         <transition leave-active-class="animated zoomOut">
           <q-badge v-if="modified" color="negative" floating rounded />
         </transition>
+        <span v-if="modified" class="sr-only">{{ $t('split.modified') }}</span>
       </div>
       <q-space />
-      <q-btn unelevated :icon="mdiMenu" :aria-label="$t('menu')" class="q-pa-sm btn-menu">
+      <q-btn
+        unelevated
+        :icon="mdiMenu"
+        :aria-label="anyUnseen ? $t('menu.hinted') : $t('menu')"
+        class="q-pa-sm btn-menu"
+      >
         <q-badge
           v-if="anyUnseen"
           color="warning"
