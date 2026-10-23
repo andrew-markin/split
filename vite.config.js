@@ -4,6 +4,7 @@ import { quasar, transformAssetUrls } from '@quasar/vite-plugin'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 
+import fontPreloadPlugin from './plugins/font-preload.js'
 import quasarLangsRequiredPlugin from './plugins/quasar-langs-required.js'
 
 // https://vite.dev/config/
@@ -21,7 +22,8 @@ export default defineConfig({
     quasar({
       sassVariables: fileURLToPath(new URL('./src/styles/quasar.sass', import.meta.url))
     }),
-    quasarLangsRequiredPlugin()
+    quasarLangsRequiredPlugin(),
+    fontPreloadPlugin()
   ],
   resolve: {
     alias: {
