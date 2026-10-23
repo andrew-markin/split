@@ -8,7 +8,7 @@ const HINTS_STORAGE_KEY = 'split:hints'
 // its version changes, so bump it along with the content, e.g. the revision date
 // of the privacy notice
 const HINTS = {
-  demo: '2026-10-22',
+  demo: '2026-10-24',
   privacy: '2026-10-22'
 }
 
