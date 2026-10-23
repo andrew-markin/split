@@ -1,5 +1,5 @@
 import { Mutex } from 'async-mutex'
-import { computed, ref, shallowRef, toRaw, triggerRef, watch } from 'vue'
+import { computed, readonly, ref, shallowRef, toRaw, triggerRef, watch } from 'vue'
 import * as z from 'zod'
 
 import database from '@/database'
@@ -131,6 +131,10 @@ function useContext() {
     return await getDerivedKey(secret, CIPHER_SALT, 'STORAGE_KEY')
   }
 
+  // Set once the first split connected has some data to show: from the local
+  // copy if there is one, otherwise from the server
+  const loaded = ref(false)
+
   async function connect(secret) {
     const release = await mutex.acquire()
     try {
@@ -158,11 +162,15 @@ function useContext() {
       properties = { ...legacy?.properties, ...state?.properties }
       triggerRef(dataset)
       if (legacy && (await save())) dropLegacyState(anchor)
+      if (state || legacy || !navigator.onLine) loaded.value = true
       await blob.connect({ secret })
+      // Taken at once rather than after the delay of the version watcher
+      pull()
     } catch (err) {
       console.warn('Unable to connect the dataset:', err.message)
     } finally {
       release()
+      loaded.value = true
     }
   }
 
@@ -266,15 +274,20 @@ function useContext() {
         : undefined
   }
 
+  // Merges the dataset received from the server, if it's new
+  function pull() {
+    const state = toRaw(blob.state)
+    if (!state.version || version.value === state.version) return
+    merge(state.dataset)
+    version.value = state.version
+    save()
+    triggerRef(dataset)
+  }
+
   async function fetch() {
     const release = await mutex.acquire()
     try {
-      const state = toRaw(blob.state)
-      if (version.value === state.version) return
-      merge(state.dataset)
-      version.value = state.version
-      save()
-      triggerRef(dataset)
+      pull()
     } catch (err) {
       console.error('Unable to sync:', err.message)
     } finally {
@@ -490,6 +503,7 @@ function useContext() {
     connect,
     constrain,
     find,
+    loaded: readonly(loaded),
     locals,
     modified,
     select,

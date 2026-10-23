@@ -7,34 +7,39 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 
 import DialogStack from '@/components/DialogStack.vue'
 import { useAnnouncer } from '@/composables/useAnnouncer'
+import { useSplit } from '@/composables/useSplit'
 import { useThemes } from '@/composables/useThemes'
 
 const ready = ref(false)
 
 const { message: announcement } = useAnnouncer()
 
-// The app is shown only after the fonts for its text are loaded, so the text
-// isn't redrawn with another font and the layout doesn't shift. The wait is
-// limited, on a slow connection the fallback font is shown and swapped later
-const FONTS_TIMEOUT = 3000
-
-function fontsLoaded(element) {
-  if (!document.fonts) return Promise.resolve()
-  const timeout = new Promise((resolve) => setTimeout(resolve, FONTS_TIMEOUT))
-  const loaded = document.fonts.load('1em Roboto', element.textContent || undefined).catch(() => {})
-  return Promise.race([loaded, timeout])
-}
+// The app is shown only after the split has some data to show and the fonts
+// for its text are loaded, so the empty tables aren't shown before they're
+// filled, the text isn't redrawn with another font, and the layout doesn't
+// shift. The wait is limited, on a slow connection the rest comes later
+const READY_TIMEOUT = 3000
 
 const appRef = ref(null)
+const { loaded } = useSplit()
+
+async function contentLoaded() {
+  if (!loaded.value) await new Promise((resolve) => watch(loaded, resolve, { once: true }))
+  await nextTick()
+  if (document.fonts) {
+    await document.fonts.load('1em Roboto', appRef.value.textContent || undefined).catch(() => {})
+  }
+}
 
 const themes = useThemes()
 onMounted(async () => {
   themes.init()
-  await fontsLoaded(appRef.value)
+  const timeout = new Promise((resolve) => setTimeout(resolve, READY_TIMEOUT))
+  await Promise.race([contentLoaded(), timeout])
   setTimeout(() => (ready.value = true), 100)
 })
 </script>
