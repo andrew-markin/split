@@ -28,10 +28,10 @@
     "async-mutex": "^0.5.0",
     "copy-to-clipboard": "^4.0.2",
     "fflate": "^0.8.3",
-    "quasar": "^2.35.1",
+    "quasar": "^2.35.2",
     "socket.io-client": "^4.8.3",
     "vue": "^3.5.44",
-    "vue-i18n": "^11.4.15",
+    "vue-i18n": "^11.4.16",
     "vue-router": "^5.3.1",
     "zod": "^4.6.7"
   },
@@ -43,22 +43,20 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-import-x": "^4.17.1",
-    "eslint-plugin-oxlint": "~1.88.0",
+    "eslint-plugin-oxlint": "~1.89.0",
     "eslint-plugin-simple-import-sort": "^14.0.0",
     "eslint-plugin-vue": "~10.11.0",
     "fake-indexeddb": "^6.2.6",
     "globals": "^17.12.0",
-    "npm-run-all2": "^9.0.3",
-    "oxlint": "~1.88.0",
+    "npm-run-all2": "^9.0.4",
+    "oxlint": "~1.89.0",
     "prettier": "3.9.10",
-    "sass-embedded": "^1.105.2",
-    "vite": "^8.3.0",
+    "sass-embedded": "^1.106.1",
+    "vite": "^8.3.5",
     "vitest": "^5.0.5"
   },
   "allowScripts": {
     "unrs-resolver@1.12.2": true,
-    "@parcel/watcher@2.6.0": true,
-    "esbuild@0.25.12": true,
-    "esbuild@0.28.2": true
+    "@parcel/watcher@2.6.0": true
   }
 }
