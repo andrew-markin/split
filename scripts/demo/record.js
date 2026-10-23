@@ -2,7 +2,8 @@
 // builds the application, serves the build, drives Google Chrome via the DevTools protocol,
 // encodes the screencast by ffmpeg and adds the captions as a subtitles track and file,
 // optionally also as a bar below the page. The captions are voiced by Piper when the locale
-// has a voice. Needs a running Blobs backend, Chrome, ffmpeg and Piper for the voice.
+// has a voice, and the clicks and key presses are heard too. Needs a running Blobs backend,
+// Chrome, ffmpeg and Piper for the voice.
 // Run with `npm run demo -- --locale ru`, see the options below.
 
 import { spawn, spawnSync } from 'node:child_process'
@@ -42,22 +43,39 @@ const { values: options } = parseArgs({
     piper: { type: 'string', default: join(homedir(), '.cache/split-demo/piper') },
     // Records the video without the voice
     mute: { type: 'boolean', default: false },
+    // Voice model to try instead of the locale one, e.g. ru_RU-denis-medium, along with its speed
+    // where values below 1 speed it up
+    voice: { type: 'string' },
+    'length-scale': { type: 'string', default: '1' },
+    // Records the video without the sounds of the clicks and key presses
+    'no-sounds': { type: 'boolean', default: false },
     // Prints the phonemes of the captions speech to check the pronunciation, records nothing
     phonemes: { type: 'boolean', default: false },
+    // Saves an example of the typing and clicking sounds, records nothing
+    'sounds-sample': { type: 'boolean', default: false },
     // Shows the browser window, for debugging of the scenario
     show: { type: 'boolean', default: false }
   }
 })
 
+// The page is laid out in CSS pixels of a 720p screen and rendered with the scale, so the video
+// is Full HD while the application is as large in it as in a 720p one
 const WIDTH = 1280
 const HEIGHT = 720
+const SCALE = 1.5
 const FPS = 30
 // The captions bar is added below the page, so it never covers the application
 const BAR_HEIGHT = options.captions ? 96 : 0
 const PAGE_HEIGHT = HEIGHT - BAR_HEIGHT
+// Sizes of the video frames in device pixels
+const VIDEO_WIDTH = WIDTH * SCALE
+const VIDEO_HEIGHT = HEIGHT * SCALE
+const VIDEO_PAGE_HEIGHT = PAGE_HEIGHT * SCALE
 const BAR_COLOR = '5c6bc0'
 const CAPTION_FONT = 'Noto Sans'
 const PACE = Number(options.pace)
+// Delay after every typed character in milliseconds, varied between the bounds like a person types
+const TYPING_DELAY = [80, 140]
 
 const locale = options.locale
 const data = content[locale]
@@ -168,13 +186,19 @@ function printPhonemes() {
   }
 }
 
-// Voice track assembled from the speeches placed at the times of their captions
+const readVoiceRate = ({ model }) =>
+  JSON.parse(readFileSync(join(options.piper, 'voices', `${model}.onnx.json`), 'utf8')).audio
+    .sample_rate
+
+// Loudness normalization of the audio track, the limiter keeps its peaks below -1.5 dB
+const AUDIO_FILTERS = 'loudnorm=I=-16:TP=-1.5,alimiter=limit=0.84:level=false'
+
+// Speeches of the captions placed at the times they're shown
 class Narration {
   #clips = []
 
   constructor(voice) {
-    const modelFile = join(options.piper, 'voices', `${voice.model}.onnx.json`)
-    this.rate = JSON.parse(readFileSync(modelFile, 'utf8')).audio.sample_rate
+    this.rate = readVoiceRate(voice)
     this.speeches = Object.fromEntries(
       Object.entries(data.captions).map(([key, caption]) => [
         key,
@@ -190,14 +214,131 @@ class Narration {
     return speech.length / 2 / this.rate
   }
 
-  // Saves the track as raw 16-bit mono samples
-  save(file, duration) {
-    const track = Buffer.alloc(Math.ceil(duration * this.rate) * 2)
+  // Adds the speeches to the samples ranging from -1 to 1
+  mix(samples) {
     for (const { time, speech } of this.#clips) {
-      speech.copy(track, Math.round(time * this.rate) * 2)
+      const start = Math.round(time * this.rate)
+      const length = Math.min(speech.length / 2, samples.length - start)
+      for (let i = 0; i < length; i++) samples[start + i] += speech.readInt16LE(i * 2) / 32768
     }
-    writeFileSync(file, track)
   }
+}
+
+// Recorded sounds of the key presses and mouse clicks, see the sources in sounds/README.md.
+// Every event takes a random variant with a slightly varied volume, so the typing doesn't sound
+// mechanical, the levels are the peaks of the sounds
+const SOUNDS = {
+  key: { variants: ['key-1', 'key-2', 'key-3', 'key-4', 'key-5', 'key-6'], level: 0.07 },
+  press: { variants: ['mouse-press'], level: 0.15 },
+  release: { variants: ['mouse-release'], level: 0.1 }
+}
+
+const SOUNDS_DIR = fileURLToPath(new URL('sounds', import.meta.url))
+
+// Decodes the sound into samples of the rate with the peak of 1
+function loadSound(name, rate) {
+  const result = spawnSync(
+    'ffmpeg',
+    ['-loglevel', 'error', '-i', join(SOUNDS_DIR, `${name}.ogg`)]
+      .concat(['-ac', '1', '-ar', rate, '-f', 'f32le', '-'])
+      .map(String),
+    { maxBuffer: 1 << 24 }
+  )
+  if (result.status !== 0) throw new Error(`Unable to load the "${name}" sound`)
+  const { buffer, byteOffset, length } = result.stdout
+  const samples = new Float32Array(buffer.slice(byteOffset, byteOffset + length))
+  const peak = samples.reduce((max, value) => Math.max(max, Math.abs(value)), 0)
+  return samples.map((value) => value / peak)
+}
+
+class Sounds {
+  #events = []
+  #seed = 1
+  #loaded = new Map()
+
+  add(kind, time = recorder?.time()) {
+    if (time !== undefined) this.#events.push({ kind, time })
+  }
+
+  // Seeded, so the same scenario sounds the same
+  #random() {
+    this.#seed = (this.#seed * 1103515245 + 12345) % 2147483648
+    return this.#seed / 2147483648
+  }
+
+  #load(name, rate) {
+    if (!this.#loaded.has(name)) this.#loaded.set(name, loadSound(name, rate))
+    return this.#loaded.get(name)
+  }
+
+  // Adds the sounds to the samples ranging from -1 to 1
+  mix(samples, rate) {
+    for (const { kind, time } of this.#events) {
+      const { variants, level } = SOUNDS[kind]
+      const sound = this.#load(variants[Math.floor(this.#random() * variants.length)], rate)
+      const gain = level * (0.85 + 0.3 * this.#random())
+      const start = Math.round(time * rate)
+      const length = Math.min(sound.length, samples.length - start)
+      for (let i = 0; i < length; i++) samples[start + i] += sound[i] * gain
+    }
+  }
+}
+
+// Saves an example of a caption spoken by the locale voice followed by typing and clicking,
+// mixed and normalized as in the video, to tune the sounds without recording one
+function saveSoundsSample(file) {
+  const sample = new Sounds()
+  const speech = data.voice && synthesize(captionSpeech(data.captions.greeting), data.voice)
+  const rate = data.voice ? readVoiceRate(data.voice) : SOUNDS_RATE
+  let time = 0.3 + (speech ? speech.length / 2 / rate + 0.5 : 0)
+  for (const word of ['Weekend', 'at', 'the', 'lake', 'trip']) {
+    for (let i = 0; i < word.length + 1; i++) {
+      sample.add('key', time)
+      time += (TYPING_DELAY[0] + Math.random() * (TYPING_DELAY[1] - TYPING_DELAY[0])) / 1000
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    time += 0.8
+    sample.add('press', time)
+    sample.add('release', time + 0.08)
+  }
+  const samples = new Float32Array(Math.ceil((time + 1) * rate))
+  if (speech) {
+    const start = Math.round(0.3 * rate)
+    for (let i = 0; i < speech.length / 2; i++)
+      samples[start + i] = speech.readInt16LE(i * 2) / 32768
+  }
+  sample.mix(samples, rate)
+  const pcm = Buffer.from(Int16Array.from(samples, (value) => Math.round(value * 32767)).buffer)
+  const result = spawnSync(
+    'ffmpeg',
+    [
+      ['-loglevel', 'error', '-y', '-f', 's16le', '-ar', rate, '-ac', '1', '-i', '-'],
+      ['-af', AUDIO_FILTERS, file]
+    ]
+      .flat()
+      .map(String),
+    { input: pcm }
+  )
+  if (result.status !== 0) throw new Error('Unable to save the sounds sample')
+  console.log(`Saved ${file}`)
+}
+
+// Sample rate of the audio track when there's no voice to take it from
+const SOUNDS_RATE = 22050
+
+// Saves the voice and the sounds as raw 16-bit mono samples, returns their rate
+function saveAudio(file, duration) {
+  const rate = narration?.rate || SOUNDS_RATE
+  const samples = new Float32Array(Math.ceil(duration * rate))
+  narration?.mix(samples)
+  if (!options['no-sounds']) sounds.mix(samples, rate)
+  const pcm = Buffer.alloc(samples.length * 2)
+  samples.forEach((value, index) => {
+    pcm.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(value * 32767))), index * 2)
+  })
+  writeFileSync(file, pcm)
+  return rate
 }
 
 // Chrome and the DevTools protocol
@@ -295,7 +436,7 @@ class Recorder {
       [
         ['-y', '-loglevel', 'error'],
         ['-f', 'image2pipe', '-c:v', 'mjpeg', '-framerate', FPS, '-i', 'pipe:0'],
-        ['-vf', `scale=${WIDTH}:${PAGE_HEIGHT},format=yuv420p`],
+        ['-vf', `scale=${VIDEO_WIDTH}:${VIDEO_PAGE_HEIGHT},format=yuv420p`],
         // Nearly lossless intermediate video, it's encoded again along with the captions
         ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '8', file]
       ]
@@ -321,8 +462,8 @@ class Recorder {
     await this.#cdp.send('Page.startScreencast', {
       format: 'jpeg',
       quality: 95,
-      maxWidth: WIDTH,
-      maxHeight: PAGE_HEIGHT
+      maxWidth: VIDEO_WIDTH,
+      maxHeight: VIDEO_PAGE_HEIGHT
     })
   }
 
@@ -345,29 +486,20 @@ class Recorder {
 // ISO 639-2 codes of the locales for the subtitles track
 const LANGUAGES = { en: 'eng', ru: 'rus', es: 'spa', pt: 'por', de: 'deu', fr: 'fra' }
 
-// Encodes the final video with the subtitles track, the optional captions bar and voice
-function compose({ source, subtitlesFile, barFile, voiceFile, voiceRate, file }) {
+// Encodes the final video with the subtitles track, the optional captions bar and audio
+function compose({ source, subtitlesFile, barFile, audioFile, audioRate, file }) {
   console.log('Encoding the video...')
-  const filters = [`pad=${WIDTH}:${HEIGHT}:0:0:color=0x${BAR_COLOR}`]
+  const filters = [`pad=${VIDEO_WIDTH}:${VIDEO_HEIGHT}:0:0:color=0x${BAR_COLOR}`]
   if (BAR_HEIGHT) filters.push(`ass=${barFile}`)
-  const voiceInput = voiceFile ? ['-f', 's16le', '-ar', voiceRate, '-ac', '1', '-i', voiceFile] : []
-  const voiceOutput = voiceFile
-    ? [
-        '-map',
-        '2:a',
-        '-af',
-        'loudnorm=I=-16:TP=-1.5,alimiter=limit=0.84:level=false',
-        '-c:a',
-        'aac',
-        '-b:a',
-        '160k'
-      ]
+  const audioInput = audioFile ? ['-f', 's16le', '-ar', audioRate, '-ac', '1', '-i', audioFile] : []
+  const audioOutput = audioFile
+    ? ['-map', '2:a', '-af', AUDIO_FILTERS, '-c:a', 'aac', '-b:a', '160k']
     : []
   const result = spawnSync(
     'ffmpeg',
     [
-      ['-y', '-loglevel', 'error', '-i', source, '-i', subtitlesFile, ...voiceInput],
-      ['-map', '0:v', '-map', '1:s', ...voiceOutput, '-vf', filters.join(',')],
+      ['-y', '-loglevel', 'error', '-i', source, '-i', subtitlesFile, ...audioInput],
+      ['-map', '0:v', '-map', '1:s', ...audioOutput, '-vf', filters.join(',')],
       ['-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-tune', 'animation'],
       ['-c:s', 'mov_text', '-metadata:s:s:0', `language=${LANGUAGES[locale] || 'und'}`],
       ['-metadata:s:a:0', `language=${LANGUAGES[locale] || 'und'}`],
@@ -401,7 +533,7 @@ class Subtitles {
     writeFileSync(file, `WEBVTT\n\n${cues.join('\n\n')}\n`)
   }
 
-  // Captions for the bar in the ASS format rendered by ffmpeg
+  // Captions for the bar in the ASS format rendered by ffmpeg, it scales them to the video
   saveBar(file) {
     const stamp = (seconds) => new Date(seconds * 1000).toISOString().slice(12, 22)
     const position = `\\an5\\pos(${WIDTH / 2},${PAGE_HEIGHT + BAR_HEIGHT / 2})\\fad(250,250)`
@@ -433,9 +565,9 @@ class Subtitles {
   }
 }
 
-// Script evaluated in the page before the application: sets the locale and adds
-// a visible mouse cursor, along with the helpers locating the application elements
-// by their texts
+// Script evaluated in the page before the application: sets the locale, adds a visible mouse
+// cursor, the title card shown at the start and the end, and the chat message showing the copied
+// text, along with the helpers locating the application elements by their texts
 
 const PAGE_SCRIPT = `(() => {
   try {
@@ -445,7 +577,7 @@ const PAGE_SCRIPT = `(() => {
   const style = document.createElement('style')
   style.textContent = \`
     #demo-cursor {
-      position: fixed; left: 0; top: 0; z-index: 2147483647; pointer-events: none;
+      position: fixed; left: 0; top: 0; z-index: 2147483646; pointer-events: none;
       width: 26px; height: 26px; transform: translate(${WIDTH / 2}px, ${PAGE_HEIGHT / 2}px);
       filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
     }
@@ -458,6 +590,50 @@ const PAGE_SCRIPT = `(() => {
       0% { transform: scale(0.3); opacity: 1; }
       100% { transform: scale(1.4); opacity: 0; }
     }
+    /* The pulsing badges hinting at the menu items only distract in the video */
+    .hint-badge { display: none !important; }
+    #demo-card {
+      position: fixed; inset: 0; z-index: 2147483647; pointer-events: none;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #5c6bc0; color: #fff; font-family: Roboto, sans-serif; text-align: center;
+      opacity: 0; transition: opacity 0.8s ease;
+    }
+    #demo-card::before {
+      content: ''; position: absolute; inset: 0; background: rgba(255, 255, 255, 0.07);
+      mask: url('/pattern.svg') 0 0 / 480px 480px repeat;
+    }
+    #demo-card.shown { opacity: 1; }
+    #demo-card.instant { transition: none; }
+    #demo-card > * { position: relative; }
+    #demo-card.shown > * { animation: demo-rise 0.9s ease both; }
+    #demo-card.shown > :nth-child(2) { animation-delay: 0.15s; }
+    #demo-card.shown > :nth-child(3) { animation-delay: 0.3s; }
+    #demo-card.shown > :nth-child(4) { animation-delay: 0.45s; }
+    #demo-card img { width: 112px; height: 112px; margin-bottom: 20px; }
+    #demo-card .title { font-size: 72px; font-weight: 700; line-height: 1.1; }
+    #demo-card .subtitle { font-size: 30px; margin-top: 12px; }
+    #demo-card .link { font-size: 22px; margin-top: 40px; opacity: 0.8; }
+    @keyframes demo-rise {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: none; }
+    }
+    #demo-chat {
+      position: fixed; right: 40px; bottom: 12px; z-index: 2147483645; pointer-events: none;
+      width: max-content; min-width: 400px; max-width: calc(100vw - 80px);
+      border-radius: 16px; overflow: hidden; font-family: Roboto, sans-serif;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3); opacity: 0; transform: translateY(24px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    #demo-chat.shown { opacity: 1; transform: none; }
+    #demo-chat .head {
+      padding: 12px 18px; background: #5c6bc0; color: #fff; font-size: 16px; font-weight: 500;
+    }
+    #demo-chat .body { padding: 18px; background: #eceff8; }
+    #demo-chat .message {
+      margin-left: 40px; padding: 10px 14px; border-radius: 14px 14px 4px 14px;
+      background: #fff; color: #212121; font-size: 15px; line-height: 1.5;
+      white-space: pre; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+    }
   \`
 
   const cursor = document.createElement('div')
@@ -466,12 +642,36 @@ const PAGE_SCRIPT = `(() => {
     '<path d="M3 2 L3 21 L8 16.5 L11.5 24 L15 22.5 L11.5 15 L18 15 Z" ' +
     'fill="#fff" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/></svg>'
 
+  const card = document.createElement('div')
+  card.id = 'demo-card'
+  card.innerHTML = '<img src="/favicon.svg" alt=""><div class="title">Split</div>' +
+    '<div class="subtitle"></div><div class="link">split.mayfleet.com</div>'
+
+  const chat = document.createElement('div')
+  chat.id = 'demo-chat'
+  chat.innerHTML = '<div class="head"></div><div class="body"><div class="message"></div></div>'
+  chat.querySelector('.head').textContent = ${JSON.stringify(data.title)}
+
   document.addEventListener('DOMContentLoaded', () => {
     // A fresh profile may check the spelling with a dictionary of another language
     document.documentElement.spellcheck = false
     document.head.append(style)
-    document.body.append(cursor)
+    document.body.append(cursor, card, chat)
   })
+
+  // The application copies the text by the clipboard API or by the copy command
+  // as a fallback, so both are watched to show the copied text in the chat
+  let copied = ''
+  const writeText = navigator.clipboard?.writeText?.bind(navigator.clipboard)
+  if (writeText) {
+    navigator.clipboard.writeText = (value) => {
+      copied = value
+      return writeText(value)
+    }
+  }
+  window.addEventListener('copy', () => {
+    copied = document.getSelection()?.toString() || copied
+  }, true)
 
   window.addEventListener('mousemove', (event) => {
     cursor.style.transform = \`translate(\${event.clientX - 3}px, \${event.clientY - 2}px)\`
@@ -490,6 +690,20 @@ const PAGE_SCRIPT = `(() => {
   let target
 
   window.__demo = {
+    // Shows the title card with the subtitle or hides it when there's none
+    card(subtitle, instant) {
+      card.classList.toggle('instant', !!instant)
+      if (subtitle) card.querySelector('.subtitle').textContent = subtitle
+      card.classList.toggle('shown', !!subtitle)
+    },
+    copied: () => copied,
+    // Shows the copied text in the chat, one line per settlement, and tells whether it fits
+    chat(shown) {
+      const message = chat.querySelector('.message')
+      message.textContent = copied
+      chat.classList.toggle('shown', shown)
+      return message.scrollWidth <= message.clientWidth
+    },
     ready: () => !!document.querySelector('.app.ready section'),
     synced: () => !document.querySelector('.header .q-badge.bg-negative'),
     dialog: () => all('.backdrop').filter((el) => !leaving(el)).pop()?.querySelector('.q-card'),
@@ -497,7 +711,14 @@ const PAGE_SCRIPT = `(() => {
     header: () => document.querySelector('.header .cursor-pointer'),
     menuButton: () => document.querySelector('.btn-menu'),
     section: (title) => all('section').find((el) => text(el.querySelector('.text-h6')) === title),
-    add: (title) => __demo.section(title)?.querySelector('.q-btn'),
+    // The first button next to the section title, e.g. adding a new item
+    headerButton: (title) => __demo.section(title)?.querySelector('.q-btn'),
+    remove: (title) => __demo.section(title)?.querySelector('.q-btn.text-negative'),
+    // Checkbox of the section row having a cell with the value
+    select: (title, value) =>
+      all('tbody tr', __demo.section(title))
+        .find((row) => [...row.children].some((cell) => text(cell) === value))
+        ?.querySelector('.q-checkbox'),
     field: (label) =>
       all('.q-field', __demo.dialog()).find((el) => text(el.querySelector('.q-field__label')) === label),
     button: (label) => all('.q-btn', __demo.dialog()).find((el) => text(el) === label),
@@ -506,6 +727,17 @@ const PAGE_SCRIPT = `(() => {
         (el) => text(el) === label || text(el).startsWith(label + ' (')
       ),
     thumb: (label) => __demo.checkbox(label)?.parentElement.querySelector('.q-slider__thumb'),
+    // Point of the participation slider track matching the rate
+    ratePoint(label, rate) {
+      const slider = __demo.checkbox(label)?.parentElement.querySelector('[role=slider]')
+      const track = slider?.querySelector('.q-slider__track')?.getBoundingClientRect()
+      if (!track) return null
+      const { ariaValueMin: min, ariaValueMax: max } = slider
+      return {
+        x: track.left + (track.width * (rate - min)) / (max - min),
+        y: track.top + track.height / 2
+      }
+    },
     rate: (label) =>
       Number(__demo.checkbox(label)?.parentElement.querySelector('[role=slider]')?.ariaValueNow),
     option: (label) => all('.q-menu .q-item').find((el) => text(el) === label),
@@ -549,7 +781,9 @@ const PAGE_SCRIPT = `(() => {
 
 let cdp
 let recorder
+let narration
 const subtitles = new Subtitles()
+const sounds = new Sounds()
 const mouse = { x: WIDTH / 2, y: PAGE_HEIGHT / 2 }
 
 async function evaluate(expression) {
@@ -578,9 +812,10 @@ async function locate(expression) {
   return evaluate('__demo.rect()')
 }
 
-async function move(x, y) {
+// Moves the mouse smoothly, holding its button down when dragging
+async function move(x, y, { dragging = false, slowdown = 1 } = {}) {
   const distance = Math.hypot(x - mouse.x, y - mouse.y)
-  const duration = Math.min(Math.max(distance * 1.1, 250), 900) * PACE
+  const duration = Math.min(Math.max(distance * 1.1, 250), 900) * PACE * slowdown
   const steps = Math.max(Math.round(duration / 16), 1)
   const from = { ...mouse }
   for (let step = 1; step <= steps; step++) {
@@ -588,7 +823,12 @@ async function move(x, y) {
     const eased = progress < 0.5 ? 2 * progress ** 2 : 1 - (-2 * progress + 2) ** 2 / 2
     mouse.x = from.x + (x - from.x) * eased
     mouse.y = from.y + (y - from.y) * eased
-    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: mouse.x, y: mouse.y })
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: mouse.x,
+      y: mouse.y,
+      ...(dragging && { button: 'left', buttons: 1 })
+    })
     await sleep(16)
   }
 }
@@ -602,16 +842,19 @@ async function click(expression) {
   await hover(expression)
   await wait(150)
   const event = { x: mouse.x, y: mouse.y, button: 'left', clickCount: 1 }
+  sounds.add('press')
   await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...event })
   await sleep(80)
+  sounds.add('release')
   await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...event })
   await wait(350)
 }
 
 async function type(value) {
   for (const char of value) {
+    sounds.add('key')
     await cdp.send('Input.insertText', { text: char })
-    await wait(45 + Math.random() * 50)
+    await wait(TYPING_DELAY[0] + Math.random() * (TYPING_DELAY[1] - TYPING_DELAY[0]))
   }
   await wait(300)
 }
@@ -625,6 +868,7 @@ const KEYS = {
 async function press(key, times = 1) {
   for (let i = 0; i < times; i++) {
     const event = { key, ...KEYS[key] }
+    sounds.add('key')
     await cdp.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', ...event })
     await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', ...event })
     await wait(140)
@@ -658,13 +902,24 @@ async function select(label, option) {
   await waitFor('!__demo.menu()')
 }
 
-// Grabs the participation slider and moves it by the keyboard to the exact rate
+// Drags the participation slider to the rate, the keyboard corrects it in case of rounding
 async function setRate(label, rate) {
-  await click(`__demo.thumb(${str(label)})`)
+  await hover(`__demo.thumb(${str(label)})`)
+  await wait(200)
+  const event = { button: 'left', clickCount: 1 }
+  sounds.add('press')
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...mouse, ...event })
+  await wait(150)
+  const point = await evaluate(`__demo.ratePoint(${str(label)}, ${rate})`)
+  await move(point.x, mouse.y, { dragging: true, slowdown: 2.5 })
+  await wait(250)
+  sounds.add('release')
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...mouse, ...event })
   for (let attempt = 0; ; attempt++) {
     const current = await evaluate(`__demo.rate(${str(label)})`)
     if (current === rate) break
     if (Number.isNaN(current) || attempt > 50) throw new Error(`Unable to set ${label} rate`)
+    if (attempt === 0) console.warn(`The slider is dragged to ${current} instead of ${rate}`)
     await press(current < rate ? 'ArrowRight' : 'ArrowLeft')
   }
   await wait(600)
@@ -676,13 +931,38 @@ async function submit(label = t('save')) {
   await wait(500)
 }
 
-let narration
+// Selects the section row having a cell with the value and removes it after the confirmation
+async function removeItem(title, value) {
+  await click(`__demo.select(${str(title)}, ${str(value)})`)
+  await openDialog(`__demo.remove(${str(title)})`)
+  await submit(t('confirm'))
+}
+
+async function addExpense({ description, category, payer, amount, dated }) {
+  await openDialog(`__demo.headerButton(${str(t('expense.plural'))})`)
+  if (dated) {
+    await click(`__demo.field(${str(t('date'))})`)
+    await click(`__demo.day(${new Date().getDate()})`)
+    await waitFor('!__demo.menu()')
+  }
+  await fill(t('expense.description'), description)
+  if (category) await select(t('category'), category)
+  await select(t('expense.payer'), payer.name)
+  await fill(t('amount'), amount)
+  await submit()
+}
+
 let captionEnd = 0
 
-// Shows the caption once the previous one was spoken or shown long enough to be read
-async function caption(key) {
+// Waits until the current caption is spoken or shown long enough to be read
+async function captionShown() {
   const delay = captionEnd - recorder.time()
   if (delay > 0) await sleep(delay * 1000)
+}
+
+// Shows the caption once the previous one is done, or ends the last one
+async function caption(key) {
+  await captionShown()
   const time = recorder.time()
   if (!key) {
     subtitles.end(time)
@@ -697,12 +977,24 @@ async function caption(key) {
   await wait(1200)
 }
 
+// Shows the title card with the subtitle, hides it when there's none
+async function card(subtitle) {
+  await evaluate(`__demo.card(${str(subtitle || '')})`)
+  await wait(900)
+}
+
 // Scenario
 
 async function scenario() {
-  const { anna, ben, clara, tim } = data.participants
+  const { anna, ben, clara, tim, oscar } = data.participants
+  const { rent, groceries, wine, taxi } = data.expenses
 
-  await caption('intro')
+  // The recording starts with the title card shown
+  await caption('greeting')
+  await caption('about')
+  await caption('demo')
+  await captionShown()
+  await card(null)
 
   await caption('title')
   await openDialog('__demo.header()')
@@ -711,22 +1003,25 @@ async function scenario() {
 
   await caption('participants')
   await focusSection(t('participant.plural'))
-  for (const participant of [anna, ben, clara]) {
-    await openDialog(`__demo.add(${str(t('participant.plural'))})`)
+  for (const participant of [anna, ben, clara, oscar]) {
+    await openDialog(`__demo.headerButton(${str(t('participant.plural'))})`)
     await fill(t('participant.name'), participant.name)
     if (participant.preferences) await fill(t('participant.preferences'), participant.preferences)
     await submit()
   }
 
   await caption('patron')
-  await openDialog(`__demo.add(${str(t('participant.plural'))})`)
+  await openDialog(`__demo.headerButton(${str(t('participant.plural'))})`)
   await fill(t('participant.name'), tim.name)
   await select(t('participant.patron'), clara.name)
   await submit()
 
+  await caption('removal')
+  await removeItem(t('participant.plural'), oscar.name)
+
   await caption('category')
   await focusSection(t('category.plural'))
-  await openDialog(`__demo.add(${str(t('category.plural'))})`)
+  await openDialog(`__demo.headerButton(${str(t('category.plural'))})`)
   await fill(t('category.name'), data.wine)
   for (const participant of [anna, ben, clara]) {
     await click(`__demo.checkbox(${str(participant.name)})`)
@@ -737,16 +1032,39 @@ async function scenario() {
 
   await caption('expenses')
   await focusSection(t('expense.plural'))
-  const { rent, groceries, wine } = data.expenses
   await addExpense({ ...rent, payer: anna, dated: true })
   await addExpense({ ...groceries, payer: ben })
   await caption('categoryExpense')
   await addExpense({ ...wine, category: data.wine, payer: clara })
 
+  await caption('taxi')
+  await addExpense({ ...taxi, payer: ben })
+  await caption('expenseRemoval')
+  await removeItem(t('expense.plural'), taxi.description)
+
+  await caption('loan')
+  await focusSection(t('transfer.plural'))
+  await openDialog(`__demo.headerButton(${str(t('transfer.plural'))})`)
+  await select(t('sender'), ben.name)
+  await select(t('receiver'), anna.name)
+  await fill(t('transfer.comment'), data.loan.comment)
+  await fill(t('amount'), data.loan.amount)
+  await submit()
+
   await caption('settlements')
   await focusSection(t('settlement.plural'))
   await hover(`__demo.section(${str(t('settlement.plural'))})`)
   await wait(2500)
+
+  await caption('copy')
+  await click(`__demo.headerButton(${str(t('settlement.plural'))})`)
+  await waitFor('__demo.copied()')
+  if (!(await evaluate('__demo.chat(true)'))) console.warn('The copied text exceeds the chat width')
+  await wait(1000)
+  await captionShown()
+  await wait(1500)
+  await evaluate('__demo.chat(false)')
+  await wait(600)
 
   await caption('transfer')
   await openDialog(
@@ -766,30 +1084,27 @@ async function scenario() {
   await hover(`__demo.option(${str(t('menu.copyLink'))})`)
   await wait(2000)
   await press('Escape')
+  await captionShown()
 
+  await card(data.card.tagline)
   await caption('outro')
+  await captionShown()
+  await evaluate(`__demo.card(${str(data.card.thanks)})`)
+  await caption('goodbye')
   await caption(null)
-  await wait(1000)
-}
-
-async function addExpense({ description, category, payer, amount, dated }) {
-  await openDialog(`__demo.add(${str(t('expense.plural'))})`)
-  if (dated) {
-    await click(`__demo.field(${str(t('date'))})`)
-    await click(`__demo.day(${new Date().getDate()})`)
-    await waitFor('!__demo.menu()')
-  }
-  await fill(t('expense.description'), description)
-  if (category) await select(t('category'), category)
-  await select(t('expense.payer'), payer.name)
-  await fill(t('amount'), amount)
-  await submit()
+  await wait(1500)
 }
 
 // Main
 
 if (options.phonemes) {
   printPhonemes()
+  process.exit()
+}
+
+if (options['sounds-sample']) {
+  mkdirSync(resolve(ROOT, options.out), { recursive: true })
+  saveSoundsSample(join(resolve(ROOT, options.out), 'sounds-sample.mp3'))
   process.exit()
 }
 
@@ -806,7 +1121,10 @@ let chrome
 try {
   if (data.voice && !options.mute) {
     console.log('Synthesizing the voice...')
-    narration = new Narration(data.voice)
+    const voice = options.voice
+      ? { model: options.voice, lengthScale: Number(options['length-scale']) }
+      : data.voice
+    narration = new Narration(voice)
   } else if (!options.mute) {
     console.warn(`No voice for the "${locale}" locale, the video is recorded without it`)
   }
@@ -825,7 +1143,7 @@ try {
   await cdp.send('Emulation.setDeviceMetricsOverride', {
     width: WIDTH,
     height: PAGE_HEIGHT,
-    deviceScaleFactor: 1,
+    deviceScaleFactor: SCALE,
     mobile: false
   })
   await cdp.send('Emulation.setEmulatedMedia', {
@@ -834,12 +1152,14 @@ try {
   await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: PAGE_SCRIPT })
   await cdp.send('Page.navigate', { url: appUrl })
   await waitFor('window.__demo?.ready()', 20000)
+  await evaluate(`__demo.card(${str(data.card.tagline)}, true)`)
   await sleep(1000)
 
   console.log(`Recording the "${locale}" scenario...`)
   const rawFile = join(tempDir, 'raw.mp4')
   const barFile = join(tempDir, 'captions.ass')
-  const voiceFile = narration && join(tempDir, 'voice.raw')
+  const audioFile = (narration || !options['no-sounds']) && join(tempDir, 'audio.raw')
+  let audioRate
   recorder = new Recorder(cdp, rawFile)
   await recorder.start()
   try {
@@ -850,14 +1170,14 @@ try {
     await recorder.stop()
     subtitles.save(subtitlesFile)
     subtitles.saveBar(barFile)
-    narration?.save(voiceFile, duration)
+    if (audioFile) audioRate = saveAudio(audioFile, duration)
   }
   compose({
     source: rawFile,
     subtitlesFile,
     barFile,
-    voiceFile,
-    voiceRate: narration?.rate,
+    audioFile,
+    audioRate,
     file: videoFile
   })
 
