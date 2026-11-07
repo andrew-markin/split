@@ -40,6 +40,14 @@
   }
 }
 
+// Muted on the dark background only: the dark colors on the light one have no
+// contrast to spare
+.dark-muted-1 {
+  .body--dark & {
+    color: color-mix(in srgb, currentColor 75%, transparent);
+  }
+}
+
 .text-amount {
   color: $amount-color;
   .body--dark & {
