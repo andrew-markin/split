@@ -84,7 +84,7 @@ $group-tints: (
 
 // The share of a tint in its mix with the usual background of the items. They
 // stay opaque, since the background of the page would show through the cards.
-$group-tint-strength: 70%;
+$group-tint-strength: 35%;
 
 @each $light-tint, $dark-tint in $group-tints {
   $index: index($group-tints, ($light-tint, $dark-tint)) - 1;
