@@ -35,6 +35,7 @@
             v-for="(item, index) in items"
             :key="itemKey ? item[itemKey] : index"
             class="non-selectable cursor-pointer focus-outline"
+            :class="itemClass?.(item)"
             tabindex="0"
             @click="$emit('edit', item)"
             @keydown.enter.self="$emit('edit', item)"
@@ -71,6 +72,7 @@
           bordered
           square
           class="relative-position borders-x-none focus-outline"
+          :class="itemClass?.(item)"
           tabindex="0"
           @click="$emit('edit', item)"
           @keydown.enter.self="$emit('edit', item)"
@@ -121,6 +123,7 @@ const { title, items, itemKey, itemTitle } = defineProps({
   items: { type: Array, default: () => [] },
   itemKey: { type: String, default: 'id' },
   itemTitle: { type: String, default: undefined },
+  itemClass: { type: Function, default: undefined },
   noDataLabel: { type: String, default: undefined }
 })
 

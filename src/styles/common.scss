@@ -68,6 +68,34 @@
   }
 }
 
+// Backgrounds of the participant groups: calm, but distinct from each other and
+// from the usual background. GROUP_TINT_COUNT in participantGroups.js has to
+// match the number of the pairs.
+$group-tints: (
+  (#fce4ec, #4a2f38),
+  (#ffe9d1, #4a3826),
+  (#fff6c4, #444024),
+  (#dff3d8, #2f442e),
+  (#d3f2ec, #24433f),
+  (#dcebfb, #2a3b50),
+  (#e9e3fb, #3a3250),
+  (#eee3da, #423630)
+);
+
+// The share of a tint in its mix with the usual background of the items. They
+// stay opaque, since the background of the page would show through the cards.
+$group-tint-strength: 70%;
+
+@each $light-tint, $dark-tint in $group-tints {
+  $index: index($group-tints, ($light-tint, $dark-tint)) - 1;
+  .body--light .group-tint-#{$index} {
+    background-color: color-mix(in srgb, #{$light-tint} #{$group-tint-strength}, #fff);
+  }
+  .body--dark .group-tint-#{$index} {
+    background-color: color-mix(in srgb, #{$dark-tint} #{$group-tint-strength}, #{$dark});
+  }
+}
+
 ::selection {
   background: $primary;
   color: #fff;

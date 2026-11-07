@@ -3,7 +3,8 @@
     :title="$t('participant.plural')"
     :fields="fields"
     item-title="name"
-    :items="participants"
+    :items="arrangedParticipants"
+    :item-class="itemClass"
     :no-data-label="$t('participant.none')"
     @edit="edit"
   >
@@ -39,6 +40,7 @@ import { useI18n } from 'vue-i18n'
 
 import { useDialogs } from '@/composables/useDialogs'
 import { useSplit } from '@/composables/useSplit'
+import { arrangeParticipants, getGroupTints } from '@/participantGroups'
 
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import ParticipantDialog from './ParticipantDialog.vue'
@@ -66,8 +68,16 @@ const fields = computed(() => [
   }
 ])
 
-const { participants, upsert } = useSplit()
+const { participants, tintSeed, upsert } = useSplit()
 const { exec } = useDialogs()
+
+const arrangedParticipants = computed(() => arrangeParticipants(participants.value))
+const groupTints = computed(() => getGroupTints(arrangedParticipants.value, tintSeed.value))
+
+function itemClass({ id }) {
+  const tint = groupTints.value.get(id)
+  return tint === undefined ? undefined : `group-tint-${tint}`
+}
 
 async function edit(participant = {}) {
   await exec(ParticipantDialog, { participant })

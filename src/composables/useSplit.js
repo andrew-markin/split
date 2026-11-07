@@ -1,14 +1,27 @@
-import { computed } from 'vue'
+import { computed, readonly, ref } from 'vue'
 
 import { useDataset } from '@/composables/useDataset'
 import { calculateSettlements } from '@/settlements'
+import { getCipher } from '@/utils'
+
+const CIPHER_SALT = import.meta.env.VITE_CIPHER_SALT
 
 const NULL_ID = '0000000000000000000000'
 
 let context
 
 function useContext() {
-  const { constrain, connect, clone, find, loaded, locals, modified, select, upsert } = useDataset()
+  const dataset = useDataset()
+  const { constrain, clone, find, loaded, locals, modified, select, upsert } = dataset
+
+  // A value peculiar to the split that is safe to reveal, as it says nothing
+  // about the secret
+  const tintSeed = ref(undefined)
+
+  async function connect(secret) {
+    tintSeed.value = await getCipher(secret, CIPHER_SALT, 'TINT_SEED')
+    await dataset.connect(secret)
+  }
 
   constrain({
     participations: {
@@ -85,6 +98,7 @@ function useContext() {
     participants,
     participations,
     settlements,
+    tintSeed: readonly(tintSeed),
     title,
     transfers,
     upsert
