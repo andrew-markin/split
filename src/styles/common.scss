@@ -94,13 +94,22 @@ $group-tints: (
 // stay opaque, since the background of the page would show through the cards.
 $group-tint-strength: 35%;
 
+// In the tables the tint goes to the cells rather than to the rows: the cells
+// can round their own corners, while a row background clipped by the rounded
+// table bleeds into the antialiased corners of its border and fades them.
 @each $light-tint, $dark-tint in $group-tints {
   $index: index($group-tints, ($light-tint, $dark-tint)) - 1;
-  .body--light .group-tint-#{$index} {
-    background-color: color-mix(in srgb, #{$light-tint} #{$group-tint-strength}, #fff);
+  .body--light {
+    .group-tint-#{$index}:not(tr),
+    tr.group-tint-#{$index} > td {
+      background-color: color-mix(in srgb, #{$light-tint} #{$group-tint-strength}, #fff);
+    }
   }
-  .body--dark .group-tint-#{$index} {
-    background-color: color-mix(in srgb, #{$dark-tint} #{$group-tint-strength}, #{$dark});
+  .body--dark {
+    .group-tint-#{$index}:not(tr),
+    tr.group-tint-#{$index} > td {
+      background-color: color-mix(in srgb, #{$dark-tint} #{$group-tint-strength}, #{$dark});
+    }
   }
 }
 

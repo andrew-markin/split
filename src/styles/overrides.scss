@@ -19,6 +19,24 @@
     &.text-wrap {
       white-space: unset !important;
     }
+
+    // The hover overlay follows the rounded corners of the cells
+    &::before,
+    &::after {
+      border-radius: inherit;
+    }
+  }
+
+  // The bottom corner cells follow the inner curve of the rounded border, so
+  // their backgrounds don't cover its antialiased pixels
+  &.q-table--bordered tbody tr:last-child {
+    > td:first-child {
+      border-bottom-left-radius: $table-border-radius - 1px;
+    }
+
+    > td:last-child {
+      border-bottom-right-radius: $table-border-radius - 1px;
+    }
   }
 }
 
